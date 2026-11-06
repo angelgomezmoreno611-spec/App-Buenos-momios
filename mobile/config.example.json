@@ -1,0 +1,6 @@
+{
+  "APP_MODE": "live",
+  "API_URL": "https://TU-API",
+  "SUPABASE_URL": "https://TU-PROYECTO.supabase.co",
+  "SUPABASE_PUBLISHABLE_KEY": "sb_publishable_TU-CLAVE-PUBLICA"
+}

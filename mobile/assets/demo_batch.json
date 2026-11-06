@@ -1,0 +1,1038 @@
+{
+  "id": "afc87c82-8d6e-4085-a866-31fdc9249125",
+  "day": "2026-11-05",
+  "mode": "demo",
+  "createdAt": "2026-11-05T21:31:27.721Z",
+  "sourceUpdatedAt": "2026-11-05T21:31:27.721Z",
+  "source": "Datos sintéticos de demostración",
+  "modelVersion": "goals-poisson-shrinkage-v1",
+  "minProbability": 0.65,
+  "tickets": [
+    {
+      "id": "485e0b43-4213-4b7e-8f23-972f269b007f",
+      "number": 1,
+      "status": "pending",
+      "selections": [
+        {
+          "match": {
+            "id": "demo-match-0-1",
+            "league": {
+              "id": "demo-liga-0",
+              "name": "Liga de ejemplo 1"
+            },
+            "home": {
+              "id": "demo-0-1",
+              "name": "Atlético Norte CF"
+            },
+            "away": {
+              "id": "demo-0-18",
+              "name": "Sierra CF"
+            },
+            "kickoff": "2026-11-06T02:31:27.721Z",
+            "status": "TIMED"
+          },
+          "prediction": {
+            "eligible": true,
+            "matchId": "demo-match-0-1",
+            "probability": 0.8688691288686184,
+            "poisson": 0.8469985146303778,
+            "empirical": 0.9563515858215811,
+            "expectedGoals": 4.693035160375029,
+            "expectedHome": 2.885876822771997,
+            "expectedAway": 1.8071583376030316,
+            "homeSample": {
+              "count": 19,
+              "effectiveSample": 15.084649380263421,
+              "attack": 2.5523197590801847,
+              "defense": 1.360800841465515,
+              "overRate": 0.9400632491242032,
+              "rawOverRate": 0.9473684210526315,
+              "latest": "2026-11-01T21:30:27.721Z"
+            },
+            "awaySample": {
+              "count": 19,
+              "effectiveSample": 15.083960482424528,
+              "attack": 1.7683513439938536,
+              "defense": 2.8267195092867405,
+              "overRate": 0.9726399225189589,
+              "rawOverRate": 1,
+              "latest": "2026-11-01T21:14:27.721Z"
+            },
+            "leagueSample": 380,
+            "leagueOverRate": 0.9210526315789473,
+            "modelVersion": "goals-poisson-shrinkage-v1",
+            "calibrated": false,
+            "asOf": "2026-11-05T21:31:27.721Z",
+            "reasons": [
+              "Local: over 2.5 en 95% de 19 partidos en casa.",
+              "Visitante: over 2.5 en 100% de 19 partidos fuera.",
+              "Goles esperados por el modelo: 4.69.",
+              "Sin ajuste por alineaciones, lesiones, clima o motivación; datos gratuitos de marcadores."
+            ]
+          },
+          "market": "OVER_2_5",
+          "result": "pending",
+          "score": null
+        },
+        {
+          "match": {
+            "id": "demo-match-0-7",
+            "league": {
+              "id": "demo-liga-0",
+              "name": "Liga de ejemplo 1"
+            },
+            "home": {
+              "id": "demo-0-7",
+              "name": "Granada CF"
+            },
+            "away": {
+              "id": "demo-0-12",
+              "name": "Montaña CF"
+            },
+            "kickoff": "2026-11-06T08:31:27.721Z",
+            "status": "TIMED"
+          },
+          "prediction": {
+            "eligible": true,
+            "matchId": "demo-match-0-7",
+            "probability": 0.8590445985135687,
+            "poisson": 0.83886839765855,
+            "empirical": 0.9397494019336431,
+            "expectedGoals": 4.614228449111479,
+            "expectedHome": 2.8070701476923583,
+            "expectedAway": 1.8071583014191206,
+            "homeSample": {
+              "count": 19,
+              "effectiveSample": 15.084165319410454,
+              "attack": 2.4826215079638723,
+              "defense": 1.3608005164912913,
+              "overRate": 0.906858835652071,
+              "rawOverRate": 0.8947368421052632,
+              "latest": "2026-11-01T21:24:27.721Z"
+            },
+            "awaySample": {
+              "count": 19,
+              "effectiveSample": 15.083999036859469,
+              "attack": 1.7683517308888206,
+              "defense": 2.8267197986963617,
+              "overRate": 0.9726399682152151,
+              "rawOverRate": 1,
+              "latest": "2026-11-01T21:20:27.721Z"
+            },
+            "leagueSample": 380,
+            "leagueOverRate": 0.9210526315789473,
+            "modelVersion": "goals-poisson-shrinkage-v1",
+            "calibrated": false,
+            "asOf": "2026-11-05T21:31:27.721Z",
+            "reasons": [
+              "Local: over 2.5 en 89% de 19 partidos en casa.",
+              "Visitante: over 2.5 en 100% de 19 partidos fuera.",
+              "Goles esperados por el modelo: 4.61.",
+              "Sin ajuste por alineaciones, lesiones, clima o motivación; datos gratuitos de marcadores."
+            ]
+          },
+          "market": "OVER_2_5",
+          "result": "pending",
+          "score": null
+        },
+        {
+          "match": {
+            "id": "demo-match-0-8",
+            "league": {
+              "id": "demo-liga-0",
+              "name": "Liga de ejemplo 1"
+            },
+            "home": {
+              "id": "demo-0-8",
+              "name": "Horizonte CF"
+            },
+            "away": {
+              "id": "demo-0-11",
+              "name": "Laguna CF"
+            },
+            "kickoff": "2026-11-06T09:31:27.721Z",
+            "status": "TIMED"
+          },
+          "prediction": {
+            "eligible": true,
+            "matchId": "demo-match-0-8",
+            "probability": 0.8091863811921023,
+            "poisson": 0.7767378180389691,
+            "empirical": 0.9389806338046345,
+            "expectedGoals": 4.1039654450754215,
+            "expectedHome": 2.7979761414457744,
+            "expectedAway": 1.3059893036296473,
+            "homeSample": {
+              "count": 19,
+              "effectiveSample": 15.084084644111828,
+              "attack": 2.4745786096239795,
+              "defense": 1.3512743829143987,
+              "overRate": 0.9053212991158683,
+              "rawOverRate": 0.8947368421052632,
+              "latest": "2026-11-01T21:23:27.721Z"
+            },
+            "awaySample": {
+              "count": 19,
+              "effectiveSample": 15.08399927156825,
+              "attack": 1.2869539186045147,
+              "defense": 2.8267198004582044,
+              "overRate": 0.9726399684934007,
+              "rawOverRate": 1,
+              "latest": "2026-11-01T21:21:27.721Z"
+            },
+            "leagueSample": 380,
+            "leagueOverRate": 0.9210526315789473,
+            "modelVersion": "goals-poisson-shrinkage-v1",
+            "calibrated": false,
+            "asOf": "2026-11-05T21:31:27.721Z",
+            "reasons": [
+              "Local: over 2.5 en 89% de 19 partidos en casa.",
+              "Visitante: over 2.5 en 100% de 19 partidos fuera.",
+              "Goles esperados por el modelo: 4.10.",
+              "Sin ajuste por alineaciones, lesiones, clima o motivación; datos gratuitos de marcadores."
+            ]
+          },
+          "market": "OVER_2_5",
+          "result": "pending",
+          "score": null
+        },
+        {
+          "match": {
+            "id": "demo-match-0-3",
+            "league": {
+              "id": "demo-liga-0",
+              "name": "Liga de ejemplo 1"
+            },
+            "home": {
+              "id": "demo-0-3",
+              "name": "Cumbre CF"
+            },
+            "away": {
+              "id": "demo-0-16",
+              "name": "Puerto CF"
+            },
+            "kickoff": "2026-11-06T04:31:27.721Z",
+            "status": "TIMED"
+          },
+          "prediction": {
+            "eligible": true,
+            "matchId": "demo-match-0-3",
+            "probability": 0.7219617431769557,
+            "poisson": 0.6635568781743257,
+            "empirical": 0.9555812031874753,
+            "expectedGoals": 3.417151333788179,
+            "expectedHome": 2.8070698611496345,
+            "expectedAway": 0.6100814726385442,
+            "homeSample": {
+              "count": 19,
+              "effectiveSample": 15.084488024919809,
+              "attack": 2.482621379119063,
+              "defense": 1.2861007379335971,
+              "overRate": 0.9385224605563913,
+              "rawOverRate": 0.9473684210526315,
+              "latest": "2026-11-01T21:28:27.721Z"
+            },
+            "awaySample": {
+              "count": 19,
+              "effectiveSample": 15.083980140537918,
+              "attack": 0.6316547539271783,
+              "defense": 2.8267196568508757,
+              "overRate": 0.9726399458185592,
+              "rawOverRate": 1,
+              "latest": "2026-11-01T21:16:27.721Z"
+            },
+            "leagueSample": 380,
+            "leagueOverRate": 0.9210526315789473,
+            "modelVersion": "goals-poisson-shrinkage-v1",
+            "calibrated": false,
+            "asOf": "2026-11-05T21:31:27.721Z",
+            "reasons": [
+              "Local: over 2.5 en 95% de 19 partidos en casa.",
+              "Visitante: over 2.5 en 100% de 19 partidos fuera.",
+              "Goles esperados por el modelo: 3.42.",
+              "Sin ajuste por alineaciones, lesiones, clima o motivación; datos gratuitos de marcadores."
+            ]
+          },
+          "market": "OVER_2_5",
+          "result": "pending",
+          "score": null
+        }
+      ],
+      "probability": 0.43604652327567034
+    },
+    {
+      "id": "06d840c6-7156-4867-8a2d-541fc5933111",
+      "number": 2,
+      "status": "pending",
+      "selections": [
+        {
+          "match": {
+            "id": "demo-match-1-1",
+            "league": {
+              "id": "demo-liga-1",
+              "name": "Liga de ejemplo 2"
+            },
+            "home": {
+              "id": "demo-1-1",
+              "name": "Atlético Norte FC"
+            },
+            "away": {
+              "id": "demo-1-18",
+              "name": "Sierra FC"
+            },
+            "kickoff": "2026-11-06T14:31:27.721Z",
+            "status": "TIMED"
+          },
+          "prediction": {
+            "eligible": true,
+            "matchId": "demo-match-1-1",
+            "probability": 0.8688691288686184,
+            "poisson": 0.8469985146303778,
+            "empirical": 0.9563515858215811,
+            "expectedGoals": 4.693035160375029,
+            "expectedHome": 2.885876822771997,
+            "expectedAway": 1.8071583376030316,
+            "homeSample": {
+              "count": 19,
+              "effectiveSample": 15.084649380263421,
+              "attack": 2.5523197590801847,
+              "defense": 1.360800841465515,
+              "overRate": 0.9400632491242032,
+              "rawOverRate": 0.9473684210526315,
+              "latest": "2026-11-01T21:30:27.721Z"
+            },
+            "awaySample": {
+              "count": 19,
+              "effectiveSample": 15.083960482424528,
+              "attack": 1.7683513439938536,
+              "defense": 2.8267195092867405,
+              "overRate": 0.9726399225189589,
+              "rawOverRate": 1,
+              "latest": "2026-11-01T21:14:27.721Z"
+            },
+            "leagueSample": 380,
+            "leagueOverRate": 0.9210526315789473,
+            "modelVersion": "goals-poisson-shrinkage-v1",
+            "calibrated": false,
+            "asOf": "2026-11-05T21:31:27.721Z",
+            "reasons": [
+              "Local: over 2.5 en 95% de 19 partidos en casa.",
+              "Visitante: over 2.5 en 100% de 19 partidos fuera.",
+              "Goles esperados por el modelo: 4.69.",
+              "Sin ajuste por alineaciones, lesiones, clima o motivación; datos gratuitos de marcadores."
+            ]
+          },
+          "market": "OVER_2_5",
+          "result": "pending",
+          "score": null
+        },
+        {
+          "match": {
+            "id": "demo-match-1-7",
+            "league": {
+              "id": "demo-liga-1",
+              "name": "Liga de ejemplo 2"
+            },
+            "home": {
+              "id": "demo-1-7",
+              "name": "Granada FC"
+            },
+            "away": {
+              "id": "demo-1-12",
+              "name": "Montaña FC"
+            },
+            "kickoff": "2026-11-06T20:31:27.721Z",
+            "status": "TIMED"
+          },
+          "prediction": {
+            "eligible": true,
+            "matchId": "demo-match-1-7",
+            "probability": 0.8590445985135687,
+            "poisson": 0.83886839765855,
+            "empirical": 0.9397494019336431,
+            "expectedGoals": 4.614228449111479,
+            "expectedHome": 2.8070701476923583,
+            "expectedAway": 1.8071583014191206,
+            "homeSample": {
+              "count": 19,
+              "effectiveSample": 15.084165319410454,
+              "attack": 2.4826215079638723,
+              "defense": 1.3608005164912913,
+              "overRate": 0.906858835652071,
+              "rawOverRate": 0.8947368421052632,
+              "latest": "2026-11-01T21:24:27.721Z"
+            },
+            "awaySample": {
+              "count": 19,
+              "effectiveSample": 15.083999036859469,
+              "attack": 1.7683517308888206,
+              "defense": 2.8267197986963617,
+              "overRate": 0.9726399682152151,
+              "rawOverRate": 1,
+              "latest": "2026-11-01T21:20:27.721Z"
+            },
+            "leagueSample": 380,
+            "leagueOverRate": 0.9210526315789473,
+            "modelVersion": "goals-poisson-shrinkage-v1",
+            "calibrated": false,
+            "asOf": "2026-11-05T21:31:27.721Z",
+            "reasons": [
+              "Local: over 2.5 en 89% de 19 partidos en casa.",
+              "Visitante: over 2.5 en 100% de 19 partidos fuera.",
+              "Goles esperados por el modelo: 4.61.",
+              "Sin ajuste por alineaciones, lesiones, clima o motivación; datos gratuitos de marcadores."
+            ]
+          },
+          "market": "OVER_2_5",
+          "result": "pending",
+          "score": null
+        },
+        {
+          "match": {
+            "id": "demo-match-1-8",
+            "league": {
+              "id": "demo-liga-1",
+              "name": "Liga de ejemplo 2"
+            },
+            "home": {
+              "id": "demo-1-8",
+              "name": "Horizonte FC"
+            },
+            "away": {
+              "id": "demo-1-11",
+              "name": "Laguna FC"
+            },
+            "kickoff": "2026-11-06T21:31:27.721Z",
+            "status": "TIMED"
+          },
+          "prediction": {
+            "eligible": true,
+            "matchId": "demo-match-1-8",
+            "probability": 0.8091863811921023,
+            "poisson": 0.7767378180389691,
+            "empirical": 0.9389806338046345,
+            "expectedGoals": 4.1039654450754215,
+            "expectedHome": 2.7979761414457744,
+            "expectedAway": 1.3059893036296473,
+            "homeSample": {
+              "count": 19,
+              "effectiveSample": 15.084084644111828,
+              "attack": 2.4745786096239795,
+              "defense": 1.3512743829143987,
+              "overRate": 0.9053212991158683,
+              "rawOverRate": 0.8947368421052632,
+              "latest": "2026-11-01T21:23:27.721Z"
+            },
+            "awaySample": {
+              "count": 19,
+              "effectiveSample": 15.08399927156825,
+              "attack": 1.2869539186045147,
+              "defense": 2.8267198004582044,
+              "overRate": 0.9726399684934007,
+              "rawOverRate": 1,
+              "latest": "2026-11-01T21:21:27.721Z"
+            },
+            "leagueSample": 380,
+            "leagueOverRate": 0.9210526315789473,
+            "modelVersion": "goals-poisson-shrinkage-v1",
+            "calibrated": false,
+            "asOf": "2026-11-05T21:31:27.721Z",
+            "reasons": [
+              "Local: over 2.5 en 89% de 19 partidos en casa.",
+              "Visitante: over 2.5 en 100% de 19 partidos fuera.",
+              "Goles esperados por el modelo: 4.10.",
+              "Sin ajuste por alineaciones, lesiones, clima o motivación; datos gratuitos de marcadores."
+            ]
+          },
+          "market": "OVER_2_5",
+          "result": "pending",
+          "score": null
+        },
+        {
+          "match": {
+            "id": "demo-match-1-3",
+            "league": {
+              "id": "demo-liga-1",
+              "name": "Liga de ejemplo 2"
+            },
+            "home": {
+              "id": "demo-1-3",
+              "name": "Cumbre FC"
+            },
+            "away": {
+              "id": "demo-1-16",
+              "name": "Puerto FC"
+            },
+            "kickoff": "2026-11-06T16:31:27.721Z",
+            "status": "TIMED"
+          },
+          "prediction": {
+            "eligible": true,
+            "matchId": "demo-match-1-3",
+            "probability": 0.7219617431769557,
+            "poisson": 0.6635568781743257,
+            "empirical": 0.9555812031874753,
+            "expectedGoals": 3.417151333788179,
+            "expectedHome": 2.8070698611496345,
+            "expectedAway": 0.6100814726385442,
+            "homeSample": {
+              "count": 19,
+              "effectiveSample": 15.084488024919809,
+              "attack": 2.482621379119063,
+              "defense": 1.2861007379335971,
+              "overRate": 0.9385224605563913,
+              "rawOverRate": 0.9473684210526315,
+              "latest": "2026-11-01T21:28:27.721Z"
+            },
+            "awaySample": {
+              "count": 19,
+              "effectiveSample": 15.083980140537918,
+              "attack": 0.6316547539271783,
+              "defense": 2.8267196568508757,
+              "overRate": 0.9726399458185592,
+              "rawOverRate": 1,
+              "latest": "2026-11-01T21:16:27.721Z"
+            },
+            "leagueSample": 380,
+            "leagueOverRate": 0.9210526315789473,
+            "modelVersion": "goals-poisson-shrinkage-v1",
+            "calibrated": false,
+            "asOf": "2026-11-05T21:31:27.721Z",
+            "reasons": [
+              "Local: over 2.5 en 95% de 19 partidos en casa.",
+              "Visitante: over 2.5 en 100% de 19 partidos fuera.",
+              "Goles esperados por el modelo: 3.42.",
+              "Sin ajuste por alineaciones, lesiones, clima o motivación; datos gratuitos de marcadores."
+            ]
+          },
+          "market": "OVER_2_5",
+          "result": "pending",
+          "score": null
+        }
+      ],
+      "probability": 0.43604652327567034
+    },
+    {
+      "id": "c6eadb54-60be-45f6-b21c-5f0e63f392c0",
+      "number": 3,
+      "status": "pending",
+      "selections": [
+        {
+          "match": {
+            "id": "demo-match-0-4",
+            "league": {
+              "id": "demo-liga-0",
+              "name": "Liga de ejemplo 1"
+            },
+            "home": {
+              "id": "demo-0-4",
+              "name": "Dorado CF"
+            },
+            "away": {
+              "id": "demo-0-15",
+              "name": "Pacífico CF"
+            },
+            "kickoff": "2026-11-06T05:31:27.721Z",
+            "status": "TIMED"
+          },
+          "prediction": {
+            "eligible": true,
+            "matchId": "demo-match-0-4",
+            "probability": 0.8613617105144774,
+            "poisson": 0.8379065241828807,
+            "empirical": 0.9551824558408639,
+            "expectedGoals": 4.605134239343749,
+            "expectedHome": 2.79797584069673,
+            "expectedAway": 1.8071583986470188,
+            "homeSample": {
+              "count": 19,
+              "effectiveSample": 15.084407347895242,
+              "attack": 2.474578421148154,
+              "defense": 1.360800678978803,
+              "overRate": 0.937724957168652,
+              "rawOverRate": 0.9473684210526315,
+              "latest": "2026-11-01T21:27:27.721Z"
+            },
+            "awaySample": {
+              "count": 19,
+              "effectiveSample": 15.083987476200312,
+              "attack": 1.768351614877378,
+              "defense": 2.826719711916148,
+              "overRate": 0.9726399545130759,
+              "rawOverRate": 1,
+              "latest": "2026-11-01T21:17:27.721Z"
+            },
+            "leagueSample": 380,
+            "leagueOverRate": 0.9210526315789473,
+            "modelVersion": "goals-poisson-shrinkage-v1",
+            "calibrated": false,
+            "asOf": "2026-11-05T21:31:27.721Z",
+            "reasons": [
+              "Local: over 2.5 en 95% de 19 partidos en casa.",
+              "Visitante: over 2.5 en 100% de 19 partidos fuera.",
+              "Goles esperados por el modelo: 4.61.",
+              "Sin ajuste por alineaciones, lesiones, clima o motivación; datos gratuitos de marcadores."
+            ]
+          },
+          "market": "OVER_2_5",
+          "result": "pending",
+          "score": null
+        },
+        {
+          "match": {
+            "id": "demo-match-0-5",
+            "league": {
+              "id": "demo-liga-0",
+              "name": "Liga de ejemplo 1"
+            },
+            "home": {
+              "id": "demo-0-5",
+              "name": "Estrella CF"
+            },
+            "away": {
+              "id": "demo-0-14",
+              "name": "Olivo CF"
+            },
+            "kickoff": "2026-11-06T06:31:27.721Z",
+            "status": "TIMED"
+          },
+          "prediction": {
+            "eligible": true,
+            "matchId": "demo-match-0-5",
+            "probability": 0.8414779339377197,
+            "poisson": 0.8131538201788615,
+            "empirical": 0.9547743889731524,
+            "expectedGoals": 4.385718565224722,
+            "expectedHome": 2.8858766341345294,
+            "expectedAway": 1.4998419310901923,
+            "homeSample": {
+              "count": 19,
+              "effectiveSample": 15.084326671302158,
+              "attack": 2.5523193711850642,
+              "defense": 1.3512744924319093,
+              "overRate": 0.9369088167704297,
+              "rawOverRate": 0.9473684210526315,
+              "latest": "2026-11-01T21:26:27.721Z"
+            },
+            "awaySample": {
+              "count": 19,
+              "effectiveSample": 15.083993097682256,
+              "attack": 1.4779809365199978,
+              "defense": 2.8267197541138747,
+              "overRate": 0.9726399611758749,
+              "rawOverRate": 1,
+              "latest": "2026-11-01T21:18:27.721Z"
+            },
+            "leagueSample": 380,
+            "leagueOverRate": 0.9210526315789473,
+            "modelVersion": "goals-poisson-shrinkage-v1",
+            "calibrated": false,
+            "asOf": "2026-11-05T21:31:27.721Z",
+            "reasons": [
+              "Local: over 2.5 en 95% de 19 partidos en casa.",
+              "Visitante: over 2.5 en 100% de 19 partidos fuera.",
+              "Goles esperados por el modelo: 4.39.",
+              "Sin ajuste por alineaciones, lesiones, clima o motivación; datos gratuitos de marcadores."
+            ]
+          },
+          "market": "OVER_2_5",
+          "result": "pending",
+          "score": null
+        },
+        {
+          "match": {
+            "id": "demo-match-0-9",
+            "league": {
+              "id": "demo-liga-0",
+              "name": "Liga de ejemplo 1"
+            },
+            "home": {
+              "id": "demo-0-9",
+              "name": "Islas CF"
+            },
+            "away": {
+              "id": "demo-0-10",
+              "name": "Jardín CF"
+            },
+            "kickoff": "2026-11-06T10:31:27.721Z",
+            "status": "TIMED"
+          },
+          "prediction": {
+            "eligible": true,
+            "matchId": "demo-match-0-9",
+            "probability": 0.7802829108340877,
+            "poisson": 0.7408051640349376,
+            "empirical": 0.9381938980306881,
+            "expectedGoals": 3.8609433320439575,
+            "expectedHome": 2.885876230247166,
+            "expectedAway": 0.9750671017967917,
+            "homeSample": {
+              "count": 19,
+              "effectiveSample": 15.084003969244675,
+              "attack": 2.5523189832873974,
+              "defense": 1.2861012436964703,
+              "overRate": 0.9037478295182714,
+              "rawOverRate": 0.8947368421052632,
+              "latest": "2026-11-01T21:22:27.721Z"
+            },
+            "awaySample": {
+              "count": 19,
+              "effectiveSample": 15.08399762607933,
+              "attack": 1.0095463567801168,
+              "defense": 2.8267197881063297,
+              "overRate": 0.9726399665431047,
+              "rawOverRate": 1,
+              "latest": "2026-11-01T21:22:27.721Z"
+            },
+            "leagueSample": 380,
+            "leagueOverRate": 0.9210526315789473,
+            "modelVersion": "goals-poisson-shrinkage-v1",
+            "calibrated": false,
+            "asOf": "2026-11-05T21:31:27.721Z",
+            "reasons": [
+              "Local: over 2.5 en 89% de 19 partidos en casa.",
+              "Visitante: over 2.5 en 100% de 19 partidos fuera.",
+              "Goles esperados por el modelo: 3.86.",
+              "Sin ajuste por alineaciones, lesiones, clima o motivación; datos gratuitos de marcadores."
+            ]
+          },
+          "market": "OVER_2_5",
+          "result": "pending",
+          "score": null
+        },
+        {
+          "match": {
+            "id": "demo-match-0-0",
+            "league": {
+              "id": "demo-liga-0",
+              "name": "Liga de ejemplo 1"
+            },
+            "home": {
+              "id": "demo-0-0",
+              "name": "Aurora CF"
+            },
+            "away": {
+              "id": "demo-0-19",
+              "name": "Valle CF"
+            },
+            "kickoff": "2026-11-06T01:31:27.721Z",
+            "status": "TIMED"
+          },
+          "prediction": {
+            "eligible": true,
+            "matchId": "demo-match-0-0",
+            "probability": 0.6904556161830084,
+            "poisson": 0.6291391779025668,
+            "empirical": 0.9357213693047752,
+            "expectedGoals": 3.243687818804099,
+            "expectedHome": 2.797975336025714,
+            "expectedAway": 0.4457124827783851,
+            "homeSample": {
+              "count": 19,
+              "effectiveSample": 15.08473005858247,
+              "attack": 2.4745782326735655,
+              "defense": 1.2861004850540283,
+              "overRate": 0.8988028306060084,
+              "rawOverRate": 0.8947368421052632,
+              "latest": "2026-11-01T21:31:27.721Z"
+            },
+            "awaySample": {
+              "count": 19,
+              "effectiveSample": 15.083948235634168,
+              "attack": 0.46147355167358856,
+              "defense": 2.826719417355767,
+              "overRate": 0.9726399080035422,
+              "rawOverRate": 1,
+              "latest": "2026-11-01T21:13:27.721Z"
+            },
+            "leagueSample": 380,
+            "leagueOverRate": 0.9210526315789473,
+            "modelVersion": "goals-poisson-shrinkage-v1",
+            "calibrated": false,
+            "asOf": "2026-11-05T21:31:27.721Z",
+            "reasons": [
+              "Local: over 2.5 en 89% de 19 partidos en casa.",
+              "Visitante: over 2.5 en 100% de 19 partidos fuera.",
+              "Goles esperados por el modelo: 3.24.",
+              "Sin ajuste por alineaciones, lesiones, clima o motivación; datos gratuitos de marcadores."
+            ]
+          },
+          "market": "OVER_2_5",
+          "result": "pending",
+          "score": null
+        }
+      ],
+      "probability": 0.39049561049554726
+    },
+    {
+      "id": "d3bb4071-b3bf-469c-83fc-891f69f02aeb",
+      "number": 4,
+      "status": "pending",
+      "selections": [
+        {
+          "match": {
+            "id": "demo-match-1-4",
+            "league": {
+              "id": "demo-liga-1",
+              "name": "Liga de ejemplo 2"
+            },
+            "home": {
+              "id": "demo-1-4",
+              "name": "Dorado FC"
+            },
+            "away": {
+              "id": "demo-1-15",
+              "name": "Pacífico FC"
+            },
+            "kickoff": "2026-11-06T17:31:27.721Z",
+            "status": "TIMED"
+          },
+          "prediction": {
+            "eligible": true,
+            "matchId": "demo-match-1-4",
+            "probability": 0.8613617105144774,
+            "poisson": 0.8379065241828807,
+            "empirical": 0.9551824558408639,
+            "expectedGoals": 4.605134239343749,
+            "expectedHome": 2.79797584069673,
+            "expectedAway": 1.8071583986470188,
+            "homeSample": {
+              "count": 19,
+              "effectiveSample": 15.084407347895242,
+              "attack": 2.474578421148154,
+              "defense": 1.360800678978803,
+              "overRate": 0.937724957168652,
+              "rawOverRate": 0.9473684210526315,
+              "latest": "2026-11-01T21:27:27.721Z"
+            },
+            "awaySample": {
+              "count": 19,
+              "effectiveSample": 15.083987476200312,
+              "attack": 1.768351614877378,
+              "defense": 2.826719711916148,
+              "overRate": 0.9726399545130759,
+              "rawOverRate": 1,
+              "latest": "2026-11-01T21:17:27.721Z"
+            },
+            "leagueSample": 380,
+            "leagueOverRate": 0.9210526315789473,
+            "modelVersion": "goals-poisson-shrinkage-v1",
+            "calibrated": false,
+            "asOf": "2026-11-05T21:31:27.721Z",
+            "reasons": [
+              "Local: over 2.5 en 95% de 19 partidos en casa.",
+              "Visitante: over 2.5 en 100% de 19 partidos fuera.",
+              "Goles esperados por el modelo: 4.61.",
+              "Sin ajuste por alineaciones, lesiones, clima o motivación; datos gratuitos de marcadores."
+            ]
+          },
+          "market": "OVER_2_5",
+          "result": "pending",
+          "score": null
+        },
+        {
+          "match": {
+            "id": "demo-match-1-5",
+            "league": {
+              "id": "demo-liga-1",
+              "name": "Liga de ejemplo 2"
+            },
+            "home": {
+              "id": "demo-1-5",
+              "name": "Estrella FC"
+            },
+            "away": {
+              "id": "demo-1-14",
+              "name": "Olivo FC"
+            },
+            "kickoff": "2026-11-06T18:31:27.721Z",
+            "status": "TIMED"
+          },
+          "prediction": {
+            "eligible": true,
+            "matchId": "demo-match-1-5",
+            "probability": 0.8414779339377197,
+            "poisson": 0.8131538201788615,
+            "empirical": 0.9547743889731524,
+            "expectedGoals": 4.385718565224722,
+            "expectedHome": 2.8858766341345294,
+            "expectedAway": 1.4998419310901923,
+            "homeSample": {
+              "count": 19,
+              "effectiveSample": 15.084326671302158,
+              "attack": 2.5523193711850642,
+              "defense": 1.3512744924319093,
+              "overRate": 0.9369088167704297,
+              "rawOverRate": 0.9473684210526315,
+              "latest": "2026-11-01T21:26:27.721Z"
+            },
+            "awaySample": {
+              "count": 19,
+              "effectiveSample": 15.083993097682256,
+              "attack": 1.4779809365199978,
+              "defense": 2.8267197541138747,
+              "overRate": 0.9726399611758749,
+              "rawOverRate": 1,
+              "latest": "2026-11-01T21:18:27.721Z"
+            },
+            "leagueSample": 380,
+            "leagueOverRate": 0.9210526315789473,
+            "modelVersion": "goals-poisson-shrinkage-v1",
+            "calibrated": false,
+            "asOf": "2026-11-05T21:31:27.721Z",
+            "reasons": [
+              "Local: over 2.5 en 95% de 19 partidos en casa.",
+              "Visitante: over 2.5 en 100% de 19 partidos fuera.",
+              "Goles esperados por el modelo: 4.39.",
+              "Sin ajuste por alineaciones, lesiones, clima o motivación; datos gratuitos de marcadores."
+            ]
+          },
+          "market": "OVER_2_5",
+          "result": "pending",
+          "score": null
+        },
+        {
+          "match": {
+            "id": "demo-match-1-9",
+            "league": {
+              "id": "demo-liga-1",
+              "name": "Liga de ejemplo 2"
+            },
+            "home": {
+              "id": "demo-1-9",
+              "name": "Islas FC"
+            },
+            "away": {
+              "id": "demo-1-10",
+              "name": "Jardín FC"
+            },
+            "kickoff": "2026-11-06T22:31:27.721Z",
+            "status": "TIMED"
+          },
+          "prediction": {
+            "eligible": true,
+            "matchId": "demo-match-1-9",
+            "probability": 0.7802829108340877,
+            "poisson": 0.7408051640349376,
+            "empirical": 0.9381938980306881,
+            "expectedGoals": 3.8609433320439575,
+            "expectedHome": 2.885876230247166,
+            "expectedAway": 0.9750671017967917,
+            "homeSample": {
+              "count": 19,
+              "effectiveSample": 15.084003969244675,
+              "attack": 2.5523189832873974,
+              "defense": 1.2861012436964703,
+              "overRate": 0.9037478295182714,
+              "rawOverRate": 0.8947368421052632,
+              "latest": "2026-11-01T21:22:27.721Z"
+            },
+            "awaySample": {
+              "count": 19,
+              "effectiveSample": 15.08399762607933,
+              "attack": 1.0095463567801168,
+              "defense": 2.8267197881063297,
+              "overRate": 0.9726399665431047,
+              "rawOverRate": 1,
+              "latest": "2026-11-01T21:22:27.721Z"
+            },
+            "leagueSample": 380,
+            "leagueOverRate": 0.9210526315789473,
+            "modelVersion": "goals-poisson-shrinkage-v1",
+            "calibrated": false,
+            "asOf": "2026-11-05T21:31:27.721Z",
+            "reasons": [
+              "Local: over 2.5 en 89% de 19 partidos en casa.",
+              "Visitante: over 2.5 en 100% de 19 partidos fuera.",
+              "Goles esperados por el modelo: 3.86.",
+              "Sin ajuste por alineaciones, lesiones, clima o motivación; datos gratuitos de marcadores."
+            ]
+          },
+          "market": "OVER_2_5",
+          "result": "pending",
+          "score": null
+        },
+        {
+          "match": {
+            "id": "demo-match-1-0",
+            "league": {
+              "id": "demo-liga-1",
+              "name": "Liga de ejemplo 2"
+            },
+            "home": {
+              "id": "demo-1-0",
+              "name": "Aurora FC"
+            },
+            "away": {
+              "id": "demo-1-19",
+              "name": "Valle FC"
+            },
+            "kickoff": "2026-11-06T13:31:27.721Z",
+            "status": "TIMED"
+          },
+          "prediction": {
+            "eligible": true,
+            "matchId": "demo-match-1-0",
+            "probability": 0.6904556161830084,
+            "poisson": 0.6291391779025668,
+            "empirical": 0.9357213693047752,
+            "expectedGoals": 3.243687818804099,
+            "expectedHome": 2.797975336025714,
+            "expectedAway": 0.4457124827783851,
+            "homeSample": {
+              "count": 19,
+              "effectiveSample": 15.08473005858247,
+              "attack": 2.4745782326735655,
+              "defense": 1.2861004850540283,
+              "overRate": 0.8988028306060084,
+              "rawOverRate": 0.8947368421052632,
+              "latest": "2026-11-01T21:31:27.721Z"
+            },
+            "awaySample": {
+              "count": 19,
+              "effectiveSample": 15.083948235634168,
+              "attack": 0.46147355167358856,
+              "defense": 2.826719417355767,
+              "overRate": 0.9726399080035422,
+              "rawOverRate": 1,
+              "latest": "2026-11-01T21:13:27.721Z"
+            },
+            "leagueSample": 380,
+            "leagueOverRate": 0.9210526315789473,
+            "modelVersion": "goals-poisson-shrinkage-v1",
+            "calibrated": false,
+            "asOf": "2026-11-05T21:31:27.721Z",
+            "reasons": [
+              "Local: over 2.5 en 89% de 19 partidos en casa.",
+              "Visitante: over 2.5 en 100% de 19 partidos fuera.",
+              "Goles esperados por el modelo: 3.24.",
+              "Sin ajuste por alineaciones, lesiones, clima o motivación; datos gratuitos de marcadores."
+            ]
+          },
+          "market": "OVER_2_5",
+          "result": "pending",
+          "score": null
+        }
+      ],
+      "probability": 0.39049561049554726
+    }
+  ],
+  "eligibleMatches": 18,
+  "missingMatches": 0,
+  "rejections": [
+    {
+      "matchId": "demo-match-0-6",
+      "reason": "Probabilidad inferior al umbral"
+    },
+    {
+      "matchId": "demo-match-1-6",
+      "reason": "Probabilidad inferior al umbral"
+    }
+  ],
+  "warnings": [
+    "DEMOSTRACIÓN: equipos, resultados y probabilidades sintéticos.",
+    "Modelo inicial sin calibrar: probabilidades estimadas, sin garantía de ganancias.",
+    "Probabilidad del ticket calculada suponiendo independencia; pueden existir correlaciones.",
+    "Sin cuotas actuales: no se calcula valor esperado ni rentabilidad."
+  ]
+}
