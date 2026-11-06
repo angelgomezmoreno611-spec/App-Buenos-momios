@@ -19,7 +19,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 - Node 22 no está en PATH: `export PATH="/tmp/node-v22.23.4-linux-x64/bin:$PATH"`.
 - Flutter SDK: `/tmp/buenos-momios-flutter/bin/flutter`, con `PUB_CACHE=/tmp/buenos-momios-pub-cache`.
-- `.git/` está vacío en este entorno: no hay historial ni `git status`/diffs.
+- Remoto Git: `origin` → github.com/angelgomezmoreno611-spec/App-Buenos-momios (público), rama `main`.
 
 ## Comandos
 

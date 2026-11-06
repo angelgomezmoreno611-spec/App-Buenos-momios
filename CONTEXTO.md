@@ -160,8 +160,9 @@ reales son locales e ignorados; nunca copiar sus valores a esta memoria.
 - Archivo abierto en el IDE: `backend/test/model.test.js`.
 - No había documentación de continuidad; `mobile/README.md` era el texto inicial
   de Flutter. `docs/` y `tools/` estaban vacíos.
-- `git status` no funciona: `.git/` es un directorio vacío de solo lectura en
-  este entorno. No se dispone de historial ni diferencias Git.
+- (Resuelto 2026-11-06) `.git/` estaba vacío; ahora es un repositorio Git con
+  remoto `origin` = https://github.com/angelgomezmoreno611-spec/App-Buenos-momios
+  (público), rama `main`.
 
 ## Resultado del bloque
 
@@ -278,3 +279,6 @@ No se dejaron servidores activos ni se desplegó el proyecto.
   documentación de BeSoccer y accesos gratuitos actualizada.
 - 2026-11-06: creado `CLAUDE.md` (comandos, arquitectura y reglas de poca RAM
   resumidas de AGENTS/README). Solo documentación; sin cambios de código ni pruebas.
+- 2026-11-06: inicializado Git y subido el proyecto a GitHub (repo público,
+  rama `main`, commit inicial). Verificado antes de subir: `backend/.env` y
+  `mobile/config.local.json` ignorados; escaneo sin claves ni valores privados.
