@@ -303,3 +303,9 @@ No se dejaron servidores activos ni se desplegó el proyecto.
   Pendientes: rotar la clave Secret de Supabase (expuesta en el chat dos veces),
   compilar la app con API_URL de Vercel, ALLOWED_ORIGIN si se usa web,
   FOOTBALL_DATA_TOKEN y programar jobs con `supabase/schedule.example.sql`.
+- 2026-11-06: `mobile/config.local.json` (ignorado por Git) apunta ahora a la API
+  de Vercel; se quitó ALLOW_LOCAL_API. Para volver al backend local: API_URL
+  `http://localhost:3000` + `"ALLOW_LOCAL_API": "true"`. Comprobado: el preflight
+  CORS desde `http://localhost:8080` no devuelve Access-Control-Allow-Origin; para
+  usar la app web local falta `ALLOWED_ORIGIN=http://localhost:8080` en Vercel
+  (Production) + Redeploy. Android/iOS no necesitan CORS.
