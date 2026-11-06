@@ -296,3 +296,10 @@ No se dejaron servidores activos ni se desplegó el proyecto.
   SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, SUPABASE_SECRET_KEY ni CRON_SECRET aunque
   el usuario hizo Redeploy. Pendiente: que las agregue en el proyecto `backend`
   para el entorno Production y vuelva a desplegar.
+- 2026-11-06: API desplegada y verificada en producción
+  (https://backend-angelgomezmoreno611-specs-projects.vercel.app):
+  `/api/health` 200 {"ok":true,"mode":"live"}; rutas de usuario 401 sin sesión;
+  `/api/jobs/settle` 401 sin CRON_SECRET. No se ejecutaron jobs reales.
+  Pendientes: rotar la clave Secret de Supabase (expuesta en el chat dos veces),
+  compilar la app con API_URL de Vercel, ALLOWED_ORIGIN si se usa web,
+  FOOTBALL_DATA_TOKEN y programar jobs con `supabase/schedule.example.sql`.
