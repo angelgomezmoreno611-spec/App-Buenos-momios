@@ -282,3 +282,11 @@ No se dejaron servidores activos ni se desplegó el proyecto.
 - 2026-11-06: inicializado Git y subido el proyecto a GitHub (repo público,
   rama `main`, commit inicial). Verificado antes de subir: `backend/.env` y
   `mobile/config.local.json` ignorados; escaneo sin claves ni valores privados.
+- 2026-11-06: despliegue en Vercel (proyecto `backend`, Root Directory `backend`,
+  dominio https://backend-angelgomezmoreno611-specs-projects.vercel.app). Usuario
+  desactivó Vercel Authentication. Error 500 FUNCTION_INVOCATION_FAILED en todas
+  las rutas: Vercel detectaba un preset de servidor. Corregido con
+  `"framework": null` en `backend/vercel.json` (commit 8a7dbba); verificado `/` 404
+  y `/api/*` llegando al código. Pendiente: la API responde 503 por variables de
+  entorno faltantes/incorrectas en Production; el usuario debe revisarlas y hacer
+  Redeploy. Siguiente paso: comprobar `/api/health` = {"ok":true,"mode":"live"}.
