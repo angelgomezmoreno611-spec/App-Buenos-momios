@@ -318,3 +318,13 @@ No se dejaron servidores activos ni se desplegó el proyecto.
   Alias extra de Vercel: https://backend-sable-six-36.vercel.app.
   Pendiente: rotar la clave Secret de Supabase (expuesta tres veces) y probar
   inicio de sesión en la app web.
+- 2026-11-06: APK release arm64 compilado (`flutter build apk --release
+  --target-platform android-arm64 --dart-define-from-file=config.local.json`,
+  ~5 min, 18.4 MB) con el perfil de poca RAM: Java llegó a ~2.4 GB RSS y quedaron
+  ~100 MB libres (cerrar el navegador ayuda). Firmado con clave debug.
+  Instalado con adb en el Poco F7 (model 25053PC47G; requirió activar
+  "Instalar vía USB" en HyperOS) y la app arranca sin errores en logcat.
+  Flutter migró `minSdk = 23` a `flutter.minSdkVersion` en build.gradle.kts.
+  JDK: /home/angel/jdk/jdk-17.0.21+9 (configurado en Flutter); adb en
+  ~/Android/Sdk/platform-tools (no está en PATH). Pendiente: el usuario debe
+  probar inicio de sesión, tickets y Partidos en el teléfono.
