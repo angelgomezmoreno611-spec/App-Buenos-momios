@@ -309,3 +309,12 @@ No se dejaron servidores activos ni se desplegó el proyecto.
   CORS desde `http://localhost:8080` no devuelve Access-Control-Allow-Origin; para
   usar la app web local falta `ALLOWED_ORIGIN=http://localhost:8080` en Vercel
   (Production) + Redeploy. Android/iOS no necesitan CORS.
+- 2026-11-06: detectado que CRON_SECRET en Vercel contenía la URL pública de
+  JWKS. Con Vercel CLI (temporal en el scratchpad de la sesión, proyecto
+  vinculado en `backend/.vercel/`, ignorado) se reemplazaron CRON_SECRET y
+  SUPABASE_SECRET_KEY por los valores de `backend/.env` como Sensitive, se añadió
+  ALLOWED_ORIGIN=http://localhost:8080 y se redesplegó. Verificado: health 200,
+  CORS permite localhost:8080 y `/api/jobs/settle` rechaza la URL pública (401).
+  Alias extra de Vercel: https://backend-sable-six-36.vercel.app.
+  Pendiente: rotar la clave Secret de Supabase (expuesta tres veces) y probar
+  inicio de sesión en la app web.
