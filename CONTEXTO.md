@@ -290,3 +290,9 @@ No se dejaron servidores activos ni se desplegó el proyecto.
   y `/api/*` llegando al código. Pendiente: la API responde 503 por variables de
   entorno faltantes/incorrectas en Production; el usuario debe revisarlas y hacer
   Redeploy. Siguiente paso: comprobar `/api/health` = {"ok":true,"mode":"live"}.
+- 2026-11-06: `backend/api/index.js` ahora responde en el 503 `revisar: [...]`
+  con los NOMBRES de variables que faltan (nunca valores). 35/35 pruebas backend
+  aprobadas; subido a GitHub. Verificado en producción: Vercel no ve ninguna de
+  SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, SUPABASE_SECRET_KEY ni CRON_SECRET aunque
+  el usuario hizo Redeploy. Pendiente: que las agregue en el proyecto `backend`
+  para el entorno Production y vuelva a desplegar.
