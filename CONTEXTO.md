@@ -373,3 +373,8 @@ No se dejaron servidores activos ni se desplegó el proyecto.
   muestran la evidencia; se quitaron textos obsoletos (75%, "sin calibrar").
   Verificado: 38/38 pruebas backend, `flutter analyze` sin incidencias y 11/11
   pruebas Flutter (nuevo `test/evidence_test.dart`).
+- 2026-11-07: APK con la nueva interfaz compilado (129 s) e instalado en el Poco
+  F7; arranca sin errores en logcat. API en Vercel redesplegada desde GitHub y
+  `/api/health` OK. adb detenido. La evidencia aparecerá en lotes generados a
+  partir de ahora (requiere FOOTBALL_DATA_TOKEN para generar lotes reales); los
+  lotes antiguos muestran el texto genérico.
