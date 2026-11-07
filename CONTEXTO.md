@@ -383,3 +383,15 @@ No se dejaron servidores activos ni se desplegó el proyecto.
   Reinstalado el mismo APK (verificado que contiene los textos nuevos). Para
   compilar: cerrar el navegador antes; con caché de Gradle ya caliente tarda
   ~2 min. Si se compila de nuevo, no iniciar nada más en paralelo.
+- 2026-11-07: FOOTBALL_DATA_TOKEN configurado (validado HTTP 200) en
+  `backend/.env` (600) y en Vercel como Secret; redesplegado. Job generate
+  ejecutado en producción: lote 2026-11-07 creado con 0 tickets. Causa
+  comprobada: 32/33 partidos rechazados por "Muestra insuficiente" porque
+  `provider.js` solo descarga la temporada actual (iniciada en agosto; ~5 juegos
+  por condición). El backtest sí usaba la temporada anterior (ventana de 400
+  días), así que producción no coincide con lo evaluado. Comprobado: el plan
+  gratuito devuelve la temporada anterior (PL 2025: 380 terminados).
+  Límite: 10 peticiones/min, así que no cabe descargar 16 temporadas en cada
+  generación. Propuesta pendiente de aprobar: migración 003 con tabla de
+  histórico + job que guarda la temporada anterior una sola vez + generador que
+  combina ambos.
