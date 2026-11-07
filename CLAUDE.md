@@ -33,7 +33,8 @@ DATA_MODE=demo npm run dev                # API demo sin servicios externos
 npm run dev                               # carga backend/.env si existe
 npm run check:supabase                    # diagnóstico solo lectura (Auth, JWKS, 8 tablas)
 npm run check:football [-- --configured]  # consultas reales; --configured consume cuota
-npm run backtest -- ./partidos.json       # evaluar modelo con históricos
+npm run import:openfootball               # descarga ~10.7k partidos CC0 a data/ (ignorado)
+npm run backtest -- data/openfootball.json # evaluar el modelo con ese histórico
 ```
 
 Mobile (`cd mobile`):

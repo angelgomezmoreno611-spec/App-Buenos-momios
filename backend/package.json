@@ -12,6 +12,7 @@
     "test": "node --max-old-space-size=512 --test --test-concurrency=1",
     "check:supabase": "node --max-old-space-size=512 --env-file-if-exists=.env scripts/check-supabase.js",
     "check:football": "node --max-old-space-size=512 --env-file-if-exists=.env scripts/check-football.js",
+    "import:openfootball": "node --max-old-space-size=512 scripts/import-openfootball.js",
     "backtest": "node --max-old-space-size=512 scripts/backtest.js"
   },
   "devDependencies": {

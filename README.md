@@ -192,6 +192,8 @@ Baseline Poisson con suavizado, muestras por condición local/visitante y contro
 temporales. Las probabilidades todavía no están calibradas. El modelo no incluye
 cuotas, lesiones, alineaciones, clima ni xG; no calcula rentabilidad.
 
-`npm run backtest -- ./partidos-normalizados.json` permite evaluar datos históricos
-con `availableAt` real. Hace falta un conjunto válido antes de evaluar o calibrar
-el modelo con resultados reales.
+Histórico para evaluar el modelo: `npm run import:openfootball` descarga las
+temporadas 2019-20 a 2024-25 de cinco ligas (OpenFootball, CC0) a
+`backend/data/openfootball.json`, ignorado por Git, y `npm run backtest --
+data/openfootball.json` mide el modelo sin usar resultados futuros. Supuestos:
+horas del archivo tratadas como UTC y marcador disponible 3 h tras el inicio.

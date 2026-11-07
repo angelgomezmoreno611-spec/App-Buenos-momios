@@ -19,3 +19,4 @@ tools/.flutter-sdk/
 .idea/
 *.iml
 mobile/config.local.json
+backend/data/

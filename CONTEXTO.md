@@ -332,3 +332,20 @@ No se dejaron servidores activos ni se desplegó el proyecto.
   desarrollador Giovanni Pecoraro). Sin API pública ni licencia de datos; sus
   términos (/terms, sección 4) prohíben scraping/bots, copiar, redistribuir y uso
   comercial. No integrar ni extraer sus datos. Sin cambios de código.
+- 2026-11-07: pasos 1-2 del plan "el modelo aprende de datos abiertos".
+  Nuevo `backend/scripts/import-openfootball.js` (`npm run import:openfootball`):
+  descarga en serie 2019-20..2024-25 de en.1, es.1, de.1, it.1 y fr.1 (CC0) y
+  normaliza al formato del backtest en `backend/data/openfootball.json` (ignorado).
+  10.687 partidos con marcador. Ids de equipo unificados (sufijos FC/CF… y tabla
+  de alias por liga); auditado: 20/18 equipos por temporada y sin cortes falsos.
+  Supuestos: horas como UTC (sin zona en origen) y availableAt = kickoff + 3 h.
+  Prueba nueva `test/import-openfootball.test.js` (2/2 aprobadas).
+  Backtest del modelo actual (27 s, heap 512 MiB), comprobado:
+  8.776 evaluados; Brier 0.2455 vs 0.2471 de la tasa de la liga (mejora ~0.7%,
+  señal débil); log loss 0.684. Con p>=0.65: 767 partidos, acierto 64.9%.
+  Fiabilidad: bien en el centro, sobreconfiado en extremos (pred. 0.37 → real
+  0.45; pred. 0.73 → real 0.66). Un ticket de 4 partidos a ~65% acierta ~18%
+  (0.65^4), suponiendo independencia.
+  Siguiente paso propuesto (paso 3, sin hacer): calibrar con temporadas
+  2019-20..2023-24 y validar en 2024-25; ajustar umbral y mostrar el acierto
+  histórico en la app.
