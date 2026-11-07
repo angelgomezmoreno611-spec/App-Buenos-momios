@@ -35,6 +35,7 @@ npm run check:supabase                    # diagnóstico solo lectura (Auth, JWK
 npm run check:football [-- --configured]  # consultas reales; --configured consume cuota
 npm run import:openfootball               # descarga ~10.7k partidos CC0 a data/ (ignorado)
 npm run backtest -- data/openfootball.json # evaluar el modelo con ese histórico
+npm run calibrate -- data/openfootball.json [AAAA-MM-DD] # ajustar Platt y validar tras la fecha
 ```
 
 Mobile (`cd mobile`):

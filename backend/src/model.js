@@ -3,6 +3,13 @@ export const MODEL_VERSION = 'goals-poisson-shrinkage-v1';
 const DAY = 86_400_000;
 const clamp = (x, low, high) => Math.max(low, Math.min(high, x));
 const validGoals = x => Number.isInteger(x) && x >= 0;
+// Calibración Platt sobre logit(p). Identidad mientras no haya ajuste validado.
+export const CALIBRATION = null;
+export function calibrate(p, calibration = CALIBRATION) {
+  if (!calibration) return p;
+  const x = Math.log(p / (1 - p));
+  return clamp(1 / (1 + Math.exp(-(calibration.a + calibration.b * x))), 0.05, 0.92);
+}
 
 export function over25(lambda) {
   if (!Number.isFinite(lambda) || lambda < 0) throw new Error('Lambda inválida');
@@ -66,12 +73,13 @@ export function predict(fixture, history, { asOf = Date.now() } = {}) {
   const expectedAway = clamp(a.attack * h.defense / awayMean, 0.15, 4);
   const poisson = over25(expectedHome + expectedAway);
   const empirical = (h.overRate + a.overRate) / 2;
-  const probability = clamp(0.8 * poisson + 0.2 * empirical, 0.05, 0.92);
+  const rawProbability = clamp(0.8 * poisson + 0.2 * empirical, 0.05, 0.92);
+  const probability = calibrate(rawProbability);
   return {
-    eligible: true, matchId: fixture.id, probability, poisson, empirical,
+    eligible: true, matchId: fixture.id, probability, rawProbability, poisson, empirical,
     expectedGoals: expectedHome + expectedAway, expectedHome, expectedAway,
     homeSample: h, awaySample: a, leagueSample: rows.length, leagueOverRate: leagueRate,
-    modelVersion: MODEL_VERSION, calibrated: false, asOf: new Date(asOf).toISOString(),
+    modelVersion: MODEL_VERSION, calibrated: Boolean(CALIBRATION), asOf: new Date(asOf).toISOString(),
     reasons: [
       `Local: over 2.5 en ${Math.round(h.rawOverRate * 100)}% de ${h.count} partidos en casa.`,
       `Visitante: over 2.5 en ${Math.round(a.rawOverRate * 100)}% de ${a.count} partidos fuera.`,

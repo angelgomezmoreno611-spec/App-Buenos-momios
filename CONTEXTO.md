@@ -349,3 +349,14 @@ No se dejaron servidores activos ni se desplegó el proyecto.
   Siguiente paso propuesto (paso 3, sin hacer): calibrar con temporadas
   2019-20..2023-24 y validar en 2024-25; ajustar umbral y mostrar el acierto
   histórico en la app.
+- 2026-11-07: paso 3 (calibración). `model.js` devuelve `rawProbability` y admite
+  `CALIBRATION` (Platt sobre logit); nuevo `npm run calibrate`. Ajuste con
+  2019-20..2023-24 (7.276 partidos): a=0.065, b=0.672. Validación 2024-25 (1.500):
+  Brier sin calibrar 0.2422 vs calibrado 0.2428 → la calibración NO mejora fuera
+  de muestra; se deja `CALIBRATION = null` (modelo sin cambios de comportamiento).
+  En 2024-25 sin calibrar: umbral 0.65 → 154 picks, acierto 65.6%; 0.60 → 409,
+  64.1%; 0.55 → 721, 61.4%. Ticket estimado (independencia): 2 partidos ~43%,
+  3 ~28%, 4 ~18.5%. Única sobreconfianza clara: pred. 0.73 → real 0.62 (42 casos).
+  37/37 pruebas backend aprobadas. Siguiente paso propuesto: mejorar la
+  discriminación (vida media, prior, pesos Poisson/empírico) con validación
+  temporal, y mostrar en la app el acierto histórico y la probabilidad del ticket.
