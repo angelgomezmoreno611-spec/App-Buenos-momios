@@ -9,9 +9,28 @@ class Batch {
   String get source => data['source'] as String;
   int get missing => data['missingMatches'] as int;
   List<String> get warnings => List<String>.from(data['warnings'] as List);
+  Evidence? get evidence => data['evidence'] is Map
+      ? Evidence(Map<String, dynamic>.from(data['evidence'] as Map))
+      : null;
   List<Ticket> get tickets => (data['tickets'] as List)
       .map((t) => Ticket(Map<String, dynamic>.from(t as Map)))
       .toList();
+}
+
+/// Acierto medido del modelo en una temporada que no usó para ajustarse.
+class Evidence {
+  final Json data;
+  Evidence(this.data);
+  String get period => data['period'] as String;
+  String get leagues => data['leagues'] as String;
+  double get threshold => (data['threshold'] as num).toDouble();
+  int get picks => data['picks'] as int;
+  double get hitRate => (data['hitRate'] as num).toDouble();
+  // Cuatro selecciones con ese acierto, suponiendo independencia.
+  double get fourPicks => hitRate * hitRate * hitRate * hitRate;
+  String get summary =>
+      'En $period ($leagues), los partidos con ${percent(threshold)} o más '
+      'acertaron el ${percent(hitRate)} de $picks.';
 }
 
 class Ticket {
@@ -42,6 +61,10 @@ class Pick {
 }
 
 String percent(double p) => '${(p * 100).toStringAsFixed(1)}%';
+
+/// "1 de cada N" para explicar una probabilidad sin porcentajes.
+String oneIn(double p) =>
+    p <= 0 ? 'casi nunca' : '1 de cada ${(1 / p).round().clamp(1, 1000)}';
 String statusLabel(String status) => switch (status) {
   'won' => 'Acertado',
   'lost' => 'No acertado',

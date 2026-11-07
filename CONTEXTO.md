@@ -360,3 +360,16 @@ No se dejaron servidores activos ni se desplegó el proyecto.
   37/37 pruebas backend aprobadas. Siguiente paso propuesto: mejorar la
   discriminación (vida media, prior, pesos Poisson/empírico) con validación
   temporal, y mostrar en la app el acierto histórico y la probabilidad del ticket.
+- 2026-11-07: búsqueda de parámetros (`npm run tune`, 36 configs × pesos,
+  selección solo con 2023-24, prueba 2024-25, conjunto común de 730/796
+  partidos). Mejor en validación (vida media 365 d, 38 juegos, prior 8, solo
+  empírico) EMPEORÓ en prueba: Brier 0.2460 vs 0.2422 del actual. Conclusión:
+  diferencias = ruido; se mantienen DEFAULT_PARAMS (90 d, 20, 8, 0.8). Mejorar de
+  verdad requiere información nueva (p. ej. cuotas del mercado), no reajustar.
+  `predict` acepta `params` (por defecto los actuales; sin cambio de conducta).
+  Añadido `MODEL_EVIDENCE` (2024-25, 5 ligas, umbral 0.65, 154 picks, 65.6%) al
+  lote solo si minProbability = 0.65; texto de aviso actualizado.
+  App: tarjeta y detalle muestran "~1 de cada N"; detalle y "Cómo funciona"
+  muestran la evidencia; se quitaron textos obsoletos (75%, "sin calibrar").
+  Verificado: 38/38 pruebas backend, `flutter analyze` sin incidencias y 11/11
+  pruebas Flutter (nuevo `test/evidence_test.dart`).

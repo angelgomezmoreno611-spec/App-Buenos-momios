@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { over25, predict } from '../src/model.js';
+import { over25, predict, MODEL_EVIDENCE } from '../src/model.js';
 import { generateBatch, dayKey, resultOf, ticketStatus } from '../src/tickets.js';
 import { demoSnapshot } from '../src/demo.js';
 
@@ -42,6 +42,12 @@ test('cuatro tickets completos, solo over 2.5 y dieciséis partidos únicos', ()
     assert.equal(ticket.probability, ticket.selections.reduce((p, s) => p * s.prediction.probability, 1));
     assert.ok(ticket.selections.every(p => p.market === 'OVER_2_5' && p.prediction.probability >= .65));
   }
+});
+test('incluye la evidencia medida solo con su mismo umbral', () => {
+  const snapshot = demoSnapshot(now);
+  assert.deepEqual(generateBatch(snapshot, { now }).evidence, MODEL_EVIDENCE);
+  assert.equal(generateBatch(snapshot, { now, minProbability: 0.7 }).evidence, undefined);
+  assert.ok(MODEL_EVIDENCE.hitRate > 0 && MODEL_EVIDENCE.hitRate < 1 && MODEL_EVIDENCE.picks > 0);
 });
 test('no rellena tickets con partidos malos y no reutiliza partidos anteriores', () => {
   const snapshot = demoSnapshot(now);

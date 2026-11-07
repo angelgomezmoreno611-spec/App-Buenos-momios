@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import { predict, MODEL_VERSION } from './model.js';
+import { predict, MODEL_VERSION, MODEL_EVIDENCE } from './model.js';
 
 export function dayKey(now = Date.now(), timeZone = 'America/Mazatlan') {
   const parts = new Intl.DateTimeFormat('en-CA', { timeZone, year: 'numeric', month: '2-digit', day: '2-digit' }).formatToParts(now);
@@ -38,11 +38,13 @@ export function generateBatch(snapshot, { now = Date.now(), timeZone, minProbabi
     id: randomUUID(), day: dayKey(now, timeZone), mode,
     createdAt: new Date(now).toISOString(), sourceUpdatedAt: snapshot.fetchedAt,
     source: snapshot.source, modelVersion: MODEL_VERSION, minProbability,
+    // La evidencia solo describe al modelo con el mismo umbral con el que se midió.
+    ...(minProbability === MODEL_EVIDENCE.threshold ? { evidence: MODEL_EVIDENCE } : {}),
     tickets, eligibleMatches: candidates.length, missingMatches: Math.max(0, 16 - candidates.length),
     rejections, warnings: [
       ...(snapshot.warnings ?? []),
       ...(mode === 'demo' ? ['DEMOSTRACIÓN: equipos, resultados y probabilidades sintéticos.'] : []),
-      'Modelo inicial sin calibrar: probabilidades estimadas, sin garantía de ganancias.',
+      'Probabilidades estimadas solo con marcadores históricos; sin garantía de ganancias.',
       'Probabilidad del ticket calculada suponiendo independencia; pueden existir correlaciones.',
       'Sin cuotas actuales: no se calcula valor esperado ni rentabilidad.'
     ]

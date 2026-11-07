@@ -5,6 +5,14 @@ const clamp = (x, low, high) => Math.max(low, Math.min(high, x));
 const validGoals = x => Number.isInteger(x) && x >= 0;
 // Calibración Platt sobre logit(p). Identidad mientras no haya ajuste validado.
 export const CALIBRATION = null;
+// Parámetros del baseline. Cambiarlos solo con validación temporal (scripts/tune.js).
+// Resultado medido con validación temporal (scripts/calibrate.js y tune.js) sobre
+// datos que el modelo no vio. Corresponde a DEFAULT_PARAMS y al umbral indicado.
+export const MODEL_EVIDENCE = Object.freeze({
+  period: '2024-25', leagues: 'Premier League, LaLiga, Bundesliga, Serie A y Ligue 1',
+  source: 'OpenFootball (CC0)', threshold: 0.65, picks: 154, hitRate: 0.656
+});
+export const DEFAULT_PARAMS = Object.freeze({ halfLifeDays: 90, maxGames: 20, prior: 8, poissonWeight: 0.8 });
 export function calibrate(p, calibration = CALIBRATION) {
   if (!calibration) return p;
   const x = Math.log(p / (1 - p));
@@ -16,19 +24,19 @@ export function over25(lambda) {
   return 1 - Math.exp(-lambda) * (1 + lambda + lambda * lambda / 2);
 }
 
-function sample(rows, team, venue, at, leagueRate, baseFor, baseAgainst) {
+function sample(rows, team, venue, at, leagueRate, baseFor, baseAgainst, params) {
   const games = rows.filter(r => r[venue].id === team)
-    .sort((a, b) => Date.parse(b.kickoff) - Date.parse(a.kickoff)).slice(0, 20);
+    .sort((a, b) => Date.parse(b.kickoff) - Date.parse(a.kickoff)).slice(0, params.maxGames);
   let weight = 0, scored = 0, conceded = 0, overs = 0;
   for (const g of games) {
-    const w = Math.exp(-Math.LN2 * (at - Date.parse(g.kickoff)) / (90 * DAY));
+    const w = Math.exp(-Math.LN2 * (at - Date.parse(g.kickoff)) / (params.halfLifeDays * DAY));
     const gf = venue === 'home' ? g.homeGoals : g.awayGoals;
     const ga = venue === 'home' ? g.awayGoals : g.homeGoals;
     weight += w; scored += w * gf; conceded += w * ga;
     overs += w * Number(gf + ga >= 3);
   }
-  // Ocho partidos equivalentes de prior suavizan muestras pequeñas.
-  const prior = 8;
+  // Partidos equivalentes de prior que suavizan muestras pequeñas.
+  const prior = params.prior;
   return {
     count: games.length,
     effectiveSample: weight,
@@ -40,7 +48,7 @@ function sample(rows, team, venue, at, leagueRate, baseFor, baseAgainst) {
   };
 }
 
-export function predict(fixture, history, { asOf = Date.now() } = {}) {
+export function predict(fixture, history, { asOf = Date.now(), params = DEFAULT_PARAMS } = {}) {
   const reject = reason => ({ eligible: false, matchId: fixture.id, reason });
   const kickoff = Date.parse(fixture.kickoff);
   if (!Number.isFinite(kickoff) || kickoff <= asOf) return reject('El partido ya empezó o no tiene horario');
@@ -61,8 +69,8 @@ export function predict(fixture, history, { asOf = Date.now() } = {}) {
   const awayMean = rows.reduce((s, r) => s + r.awayGoals, 0) / rows.length;
   if (homeMean < 0.2 || awayMean < 0.2) return reject('Promedios de liga insuficientes');
   const leagueRate = rows.filter(r => r.homeGoals + r.awayGoals >= 3).length / rows.length;
-  const h = sample(rows, fixture.home.id, 'home', asOf, leagueRate, homeMean, awayMean);
-  const a = sample(rows, fixture.away.id, 'away', asOf, leagueRate, awayMean, homeMean);
+  const h = sample(rows, fixture.home.id, 'home', asOf, leagueRate, homeMean, awayMean, params);
+  const a = sample(rows, fixture.away.id, 'away', asOf, leagueRate, awayMean, homeMean, params);
   if (h.count < 6 || a.count < 6 || h.effectiveSample < 3 || a.effectiveSample < 3) {
     return reject('Muestra insuficiente: mínimo 6 juegos por condición y 3 efectivos');
   }
@@ -73,7 +81,7 @@ export function predict(fixture, history, { asOf = Date.now() } = {}) {
   const expectedAway = clamp(a.attack * h.defense / awayMean, 0.15, 4);
   const poisson = over25(expectedHome + expectedAway);
   const empirical = (h.overRate + a.overRate) / 2;
-  const rawProbability = clamp(0.8 * poisson + 0.2 * empirical, 0.05, 0.92);
+  const rawProbability = clamp(params.poissonWeight * poisson + (1 - params.poissonWeight) * empirical, 0.05, 0.92);
   const probability = calibrate(rawProbability);
   return {
     eligible: true, matchId: fixture.id, probability, rawProbability, poisson, empirical,

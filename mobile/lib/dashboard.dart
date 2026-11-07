@@ -270,9 +270,18 @@ class _DashboardState extends State<Dashboard> with WidgetsBindingObserver {
               style: const TextStyle(color: lime, fontWeight: FontWeight.w700),
             ),
             const SizedBox(height: 6),
-            const Text(
-              'Supone independencia entre partidos. Modelo inicial sin calibrar. Over 2.5 significa 3 goles o más en 90 minutos más descuento.',
-              style: TextStyle(color: muted, height: 1.5),
+            Text(
+              'Equivale a acertar aproximadamente ${oneIn(ticket.probability)} veces.',
+              style: const TextStyle(fontWeight: FontWeight.w600),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              [
+                'Supone independencia entre partidos.',
+                if (_batch?.evidence != null) _batch!.evidence!.summary,
+                'Over 2.5 significa 3 goles o más en 90 minutos más descuento.',
+              ].join(' '),
+              style: const TextStyle(color: muted, height: 1.5),
             ),
             const SizedBox(height: 24),
             for (final pick in ticket.picks) ...[
@@ -743,8 +752,10 @@ class _DashboardState extends State<Dashboard> with WidgetsBindingObserver {
         'Resultados confirmados',
         'Un ticket se marca acertado cuando sus cuatro partidos finalizan con al menos 3 goles. Aplazados y cancelados pasan a revisión.',
       ),
-      const Notice(
-        'Un 75% histórico no es una garantía futura. Cuatro selecciones de 75% tendrían 31.6% de probabilidad conjunta si fueran independientes.',
+      Notice(
+        _batch?.evidence != null
+            ? '${_batch!.evidence!.summary} No es una garantía futura: cuatro selecciones de ${percent(_batch!.evidence!.hitRate)} acertarían juntas ${oneIn(_batch!.evidence!.fourPicks)} veces.'
+            : 'Un porcentaje histórico no es una garantía futura. Cuatro selecciones de 65% acertarían juntas 1 de cada 6 veces si fueran independientes.',
         icon: Icons.info_outline,
       ),
       const SizedBox(height: 24),
@@ -754,7 +765,7 @@ class _DashboardState extends State<Dashboard> with WidgetsBindingObserver {
       ),
       const SizedBox(height: 12),
       const Text(
-        'Este primer modelo combina Poisson y frecuencia histórica. Sus pesos todavía no están calibrados con datos de prueba. Sin cuotas actuales no podemos calcular si una selección ofrece buen valor. El plan gratuito tampoco aporta lesiones, alineaciones o xG.',
+        'El modelo combina Poisson y frecuencia histórica de goles. Se midió con temporadas que no usó para ajustarse; una calibración adicional y otros parámetros no mejoraron el resultado. Solo aprende de marcadores: no conoce cuotas, lesiones, alineaciones ni xG, y no calcula si una apuesta ofrece buen valor.',
         style: TextStyle(color: muted, height: 1.7),
       ),
       if (_batch != null) ...[
@@ -918,9 +929,9 @@ class TicketCard extends StatelessWidget {
                           fontWeight: FontWeight.w800,
                         ),
                       ),
-                      const Text(
-                        'Conjunta estimada*',
-                        style: TextStyle(color: muted, fontSize: 10),
+                      Text(
+                        'Conjunta estimada* · ~${oneIn(ticket.probability)}',
+                        style: const TextStyle(color: muted, fontSize: 10),
                       ),
                     ],
                   ),
