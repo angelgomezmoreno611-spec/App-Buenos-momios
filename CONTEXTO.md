@@ -328,3 +328,7 @@ No se dejaron servidores activos ni se desplegó el proyecto.
   JDK: /home/angel/jdk/jdk-17.0.21+9 (configurado en Flutter); adb en
   ~/Android/Sdk/platform-tools (no está en PATH). Pendiente: el usuario debe
   probar inicio de sesión, tickets y Partidos en el teléfono.
+- 2026-11-07: investigada la app Bullet (Bullet Bet Predictions, bulletpredictions.com,
+  desarrollador Giovanni Pecoraro). Sin API pública ni licencia de datos; sus
+  términos (/terms, sección 4) prohíben scraping/bots, copiar, redistribuir y uso
+  comercial. No integrar ni extraer sus datos. Sin cambios de código.
