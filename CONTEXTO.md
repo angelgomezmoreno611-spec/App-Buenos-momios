@@ -378,3 +378,8 @@ No se dejaron servidores activos ni se desplegó el proyecto.
   `/api/health` OK. adb detenido. La evidencia aparecerá en lotes generados a
   partir de ahora (requiere FOOTBALL_DATA_TOKEN para generar lotes reales); los
   lotes antiguos muestran el texto genérico.
+- 2026-11-07: durante esa compilación el kernel mató Brave por falta de memoria
+  (OOM 15:08) y la sesión de VS Code se reinició; el APK sí terminó (exit 0).
+  Reinstalado el mismo APK (verificado que contiene los textos nuevos). Para
+  compilar: cerrar el navegador antes; con caché de Gradle ya caliente tarda
+  ~2 min. Si se compila de nuevo, no iniciar nada más en paralelo.
