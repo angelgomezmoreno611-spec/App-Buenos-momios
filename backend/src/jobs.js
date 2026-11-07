@@ -1,6 +1,14 @@
 import { generateBatch, dayKey, resultOf } from './tickets.js';
 import { deliverNotifications } from './push.js';
 
+const DAY = 86_400_000;
+// Ligas europeas: la temporada empieza en julio/agosto y se nombra por su año
+// de inicio (football-data usa ?season=AAAA). Devuelve la temporada anterior.
+export function previousSeason(now = Date.now()) {
+  const d = new Date(now), year = d.getUTCFullYear();
+  return (d.getUTCMonth() >= 6 ? year : year - 1) - 1;
+}
+
 export async function runJob(kind, { repo, provider, push, timeZone, minProbability, now = Date.now() }) {
   const owner = await repo.acquireLock();
   if (!owner) return { skipped: true, reason: 'Hay otra tarea ejecutándose o se está respetando el límite del proveedor' };
@@ -11,6 +19,10 @@ export async function runJob(kind, { repo, provider, push, timeZone, minProbabil
       if (existing) return { batchId: existing.id, existing: true };
       const excludedIds = await repo.usedMatches(now);
       const snapshot = await provider.snapshot(now);
+      // Temporadas anteriores guardadas: misma ventana de 400 días que usa model.js.
+      const stored = await repo.history(now - 400 * DAY, provider.competitions?.());
+      const known = new Set(snapshot.history.map(m => m.id));
+      snapshot.history = [...snapshot.history, ...stored.filter(m => !known.has(m.id))];
       const batch = generateBatch(snapshot, { now, timeZone, minProbability, excludedIds });
       const publishedId = await repo.publish(batch);
       return { batchId: publishedId, tickets: batch.tickets.length, missingMatches: batch.missingMatches };
@@ -27,6 +39,19 @@ export async function runJob(kind, { repo, provider, push, timeZone, minProbabil
       }
       if (results.length) await repo.applyResults(results);
       return { checked: results.length, remaining: Math.max(0, ids.length - results.length) };
+    }
+    if (kind === 'history') {
+      const season = previousSeason(now), stored = new Set(await repo.storedSeasons());
+      const pending = provider.competitions().filter(code => !stored.has(`${code}:${season}`));
+      const loaded = [];
+      // Una petición por liga; el lock deja 70 s entre tareas y la cuota es 10/min.
+      for (const code of pending.slice(0, 8)) {
+        if (Date.now() > deadline - 8000) break;
+        const matches = await provider.season(code, season);
+        await repo.storeHistory(code, season, matches);
+        loaded.push({ league: code, season, matches: matches.length });
+      }
+      return { season, loaded, remaining: pending.length - loaded.length };
     }
     if (kind === 'notify') return deliverNotifications(repo, push, deadline);
     throw new Error('Tarea desconocida');

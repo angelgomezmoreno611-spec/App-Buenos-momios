@@ -62,6 +62,39 @@ export class SupabaseRepository {
     return this.request(`selections?result=in.(pending,review)&kickoff=lte.${encodeURIComponent(new Date(now).toISOString())}&select=match_id&order=kickoff.asc&limit=1000`);
   }
   async applyResults(results) { return this.rpc('apply_results', { p_results: results }); }
+  async storedSeasons() {
+    const rows = await this.request('history_seasons?select=league,season&limit=1000');
+    return rows.map(r => `${r.league}:${r.season}`);
+  }
+  async storeHistory(league, season, matches) {
+    const rows = matches.map(m => ({
+      id: m.id, league, league_name: m.league.name, season, kickoff: m.kickoff,
+      home_id: m.home.id, home_name: m.home.name, away_id: m.away.id, away_name: m.away.name,
+      home_goals: m.homeGoals, away_goals: m.awayGoals, available_at: m.availableAt
+    }));
+    const upsert = { Prefer: 'resolution=merge-duplicates,return=minimal' };
+    for (let i = 0; i < rows.length; i += 500) {
+      await this.request('match_history?on_conflict=id', { method: 'POST', body: rows.slice(i, i + 500), headers: upsert });
+    }
+    // La marca va al final: si algo falla antes, la temporada se reintenta.
+    await this.request('history_seasons?on_conflict=league,season', { method: 'POST', body: [{ league, season, matches: rows.length }], headers: upsert });
+  }
+  // Partidos guardados desde una fecha, en el formato de model.js. Pagina de 1000
+  // en 1000 porque PostgREST limita las filas por respuesta.
+  async history(since, leagues) {
+    const out = [], filter = `kickoff=gte.${encodeURIComponent(new Date(since).toISOString())}` +
+      (leagues?.length ? `&league=in.(${leagues.map(encodeURIComponent).join(',')})` : '');
+    for (let offset = 0; offset < 50_000; offset += 1000) {
+      const rows = await this.request(`match_history?${filter}&select=*&order=id.asc&limit=1000&offset=${offset}`);
+      out.push(...rows.map(r => ({
+        id: r.id, league: { id: r.league, name: r.league_name }, kickoff: new Date(r.kickoff).toISOString(),
+        status: 'FINISHED', home: { id: r.home_id, name: r.home_name }, away: { id: r.away_id, name: r.away_name },
+        homeGoals: r.home_goals, awayGoals: r.away_goals, availableAt: new Date(r.available_at).toISOString()
+      })));
+      if (rows.length < 1000) break;
+    }
+    return out;
+  }
   async acquireLock() { return this.rpc('acquire_job_lock', {}); }
   async releaseLock(owner) { return this.rpc('release_job_lock', { p_owner: owner }); }
   async claimNotifications() { return this.rpc('claim_notifications', {}); }

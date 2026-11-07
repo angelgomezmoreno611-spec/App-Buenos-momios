@@ -4,7 +4,8 @@ import { Readable } from 'node:stream';
 import { createApp } from '../src/app.js';
 import { configuredApp } from '../src/config.js';
 import { normalizeMatch, FootballData } from '../src/provider.js';
-import { runJob } from '../src/jobs.js';
+import { runJob, previousSeason } from '../src/jobs.js';
+import { demoSnapshot } from '../src/demo.js';
 import { deliverNotifications } from '../src/push.js';
 
 async function request(app, path, { method = 'GET', headers = {}, body } = {}) {
@@ -143,4 +144,44 @@ test('avisos reintentan fallos y no se envían a tokens de otro usuario', async 
   assert.equal(sent.length, 1);
   assert.equal(finished[0][2], 'pending');
   assert.equal(finished[1][2], 'invalid');
+});
+
+test('history guarda solo temporadas anteriores pendientes', async () => {
+  assert.equal(previousSeason(Date.parse('2026-11-07T12:00:00Z')), 2025);
+  assert.equal(previousSeason(Date.parse('2027-03-01T12:00:00Z')), 2025);
+  assert.equal(previousSeason(Date.parse('2027-07-15T12:00:00Z')), 2026);
+  const stored = [], requested = [];
+  const repo = { acquireLock: async () => 'lease', releaseLock: async () => {},
+    storedSeasons: async () => ['PL:2025'], storeHistory: async (...args) => { stored.push(args); } };
+  const provider = { competitions: () => ['PL', 'PD'],
+    season: async (code, year) => { requested.push(`${code}:${year}`); return [{ id: 'fd-1' }, { id: 'fd-2' }]; } };
+  const result = await runJob('history', { repo, provider, now: Date.parse('2026-11-07T12:00:00Z') });
+  assert.deepEqual(requested, ['PD:2025']);
+  assert.deepEqual(result, { season: 2025, loaded: [{ league: 'PD', season: 2025, matches: 2 }], remaining: 0 });
+  assert.equal(stored[0][0], 'PD');
+});
+test('generate combina el histórico guardado con la temporada actual', async () => {
+  const now = Date.parse('2026-11-05T17:00:00Z'), full = demoSnapshot(now);
+  let published, asked;
+  const repo = { acquireLock: async () => 'lease', releaseLock: async () => {}, getBatch: async () => null,
+    usedMatches: async () => [], publish: async batch => { published = batch; return batch.id; },
+    history: async (since, leagues) => { asked = { since, leagues }; return full.history; } };
+  // El proveedor solo trae partidos por jugar: sin el histórico no habría tickets.
+  const provider = { competitions: () => ['DEMO'], snapshot: async () => ({ ...full, history: [] }) };
+  const result = await runJob('generate', { repo, provider, now, minProbability: 0.65 });
+  assert.equal(result.tickets, 4);
+  assert.equal(published.tickets.length, 4);
+  assert.equal(asked.since, now - 400 * 86_400_000);
+  assert.deepEqual(asked.leagues, ['DEMO']);
+});
+test('proveedor descarga una temporada y conserva solo partidos terminados', async () => {
+  let url;
+  const row = (id, status, home) => ({ id, competition: { code: 'PL', name: 'Premier' }, homeTeam: { id: 1, name: 'A' }, awayTeam: { id: 2, name: 'B' },
+    utcDate: '2025-09-01T12:00:00Z', status, score: { duration: 'REGULAR', fullTime: { home, away: 1 } } });
+  const provider = new FootballData({ token: 'private', competitions: 'PL',
+    fetcher: async u => { url = u; return Response.json({ matches: [row(1, 'FINISHED', 2), row(2, 'POSTPONED', null), row(3, 'FINISHED', null)] }); } });
+  const rows = await provider.season('PL', 2025);
+  assert.match(url, /competitions\/PL\/matches\?season=2025$/);
+  assert.deepEqual(rows.map(r => r.id), ['fd-1']);
+  await assert.rejects(provider.season('PD', 2025), /inválida/);
 });

@@ -29,7 +29,8 @@ export function configuredApp(env = process.env) {
     repo: new SupabaseRepository({ url: env.SUPABASE_URL,
       secretKey: env.SUPABASE_SECRET_KEY, publishableKey: env.SUPABASE_PUBLISHABLE_KEY,
       serviceKey: env.SUPABASE_SERVICE_ROLE_KEY, anonKey: env.SUPABASE_ANON_KEY }),
-    provider: { snapshot: now => getProvider().snapshot(now), results: ids => getProvider().results(ids) },
+    provider: { snapshot: now => getProvider().snapshot(now), results: ids => getProvider().results(ids),
+      season: (code, year) => getProvider().season(code, year), competitions: () => getProvider().competitions },
     push: new FirebasePush(env.FIREBASE_SERVICE_ACCOUNT_JSON)
   });
 }

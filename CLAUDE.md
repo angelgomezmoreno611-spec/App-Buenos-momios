@@ -63,7 +63,9 @@ cuatro partidos (sin repetir partidos), liquida resultados y prepara avisos.
   de lectura arranca sin `FOOTBALL_DATA_TOKEN`; solo los jobs lo exigen (503).
 - Flujo de tickets: `model.js` (Poisson con suavizado, no calibrado) →
   `tickets.js` (`generateBatch`, `ticketStatus`) → `jobs.js` (`runJob` para
-  `generate`/`settle`/`notify`, llamados por `/api/jobs/*` con `CRON_SECRET`) →
+  `history`/`generate`/`settle`/`notify`, llamados por `/api/jobs/*` con `CRON_SECRET`;
+  `history` guarda la temporada anterior en `match_history` y `generate` la combina
+  con la temporada actual) →
   `repository.js` (`SupabaseRepository`, REST de Supabase con clave secreta) y
   `push.js` (Firebase, opcional). `demo.js` genera datos sintéticos.
 - Rutas de usuario (`/api/tickets`, `/api/history`, `/api/subscriptions`,

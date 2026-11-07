@@ -46,7 +46,8 @@ de la app se guarda localmente; la API demo no almacena tandas de usuarios.
 
 1. Crear el proyecto de Supabase y aplicar en orden los SQL de
    [supabase/migrations](supabase/migrations). En una base ya creada con `001`,
-   aplicar únicamente `002_saved_batches.sql` para este cambio. La migración
+   aplicar únicamente `002_saved_batches.sql` para este cambio. `003_match_history.sql` guarda el
+   histórico de temporadas anteriores que usa el generador. La migración
    conserva las tandas antes guardadas al activar los avisos.
 2. Configurar las variables de [backend/.env.example](backend/.env.example) en
    `backend/.env` o en el entorno del servidor, usando `DATA_MODE=live`.
@@ -118,6 +119,9 @@ Referencia: [claves nuevas de Supabase](https://supabase.com/docs/guides/getting
 
 La generación, liquidación y entrega de avisos se ejecutan mediante los endpoints
 protegidos `/api/jobs/generate`, `/api/jobs/settle` y `/api/jobs/notify`.
+`/api/jobs/history` descarga una vez la temporada anterior de cada liga y la guarda
+en `match_history`; `generate` la combina con la temporada actual para que el
+modelo tenga el mismo historial que en el backtest.
 [supabase/schedule.example.sql](supabase/schedule.example.sql) contiene el ejemplo
 de programación; no se activa automáticamente.
 

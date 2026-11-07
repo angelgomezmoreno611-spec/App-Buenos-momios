@@ -395,3 +395,15 @@ No se dejaron servidores activos ni se desplegó el proyecto.
   generación. Propuesta pendiente de aprobar: migración 003 con tabla de
   histórico + job que guarda la temporada anterior una sola vez + generador que
   combina ambos.
+- 2026-11-07: implementado histórico de temporadas anteriores.
+  Migración `003_match_history.sql` (tablas `match_history` e `history_seasons`,
+  RLS sin políticas, solo service_role). Nuevo job `/api/jobs/history`: calcula
+  la temporada anterior (`previousSeason`), descarga 1 petición por liga
+  pendiente (máx. 8 por ejecución) y la guarda; la marca de temporada se escribe
+  al final. `generate` lee `match_history` (ventana 400 días, ligas configuradas,
+  paginación de 1000) y lo combina sin duplicar con la temporada actual.
+  `schedule.example.sql` añade history a las 12:50 UTC. Verificado: 42/42
+  pruebas backend (incluye migración en PGlite). PENDIENTE del usuario: aplicar
+  003 en Supabase (SQL Editor) y borrar el lote vacío del 2026-11-07
+  (786789d2-c527-4845-9331-28fc8fb1bb19) para regenerar hoy. Después: ejecutar
+  history, esperar >70 s y ejecutar generate.

@@ -58,6 +58,16 @@ export class FootballData {
       warnings: ['Cobertura de la temporada disponible; sin cuotas, xG, alineaciones ni lesiones.']
     };
   }
+  // Temporada completa (año de inicio) de una liga configurada: solo partidos
+  // terminados con marcador de 90 minutos. Una petición al proveedor.
+  async season(code, year) {
+    if (!this.competitions.includes(code) || !Number.isInteger(year) || year < 2000) throw new Error('Temporada inválida');
+    const fetchedAt = new Date().toISOString();
+    const data = await this.get(`/competitions/${code}/matches?season=${year}`);
+    if (!Array.isArray(data.matches)) throw new Error(`Liga ${code} sin datos`);
+    return data.matches.map(row => normalizeMatch(row, fetchedAt))
+      .filter(m => m.status === 'FINISHED' && Number.isInteger(m.homeGoals) && Number.isInteger(m.awayGoals));
+  }
   async results(ids) {
     if (!ids.length) return [];
     if (ids.length > 50 || ids.some(x => !/^fd-\d+$/.test(x))) throw new Error('Lote de resultados inválido');
