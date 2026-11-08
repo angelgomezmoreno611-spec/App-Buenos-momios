@@ -498,3 +498,8 @@ No se dejaron servidores activos ni se desplegó el proyecto.
   12/12 Flutter, analyze limpio. PENDIENTE: usuario aplica 005 ANTES de las
   13:00 UTC del 2026-11-09 (si no, publish_batch rechaza el lote de 6); compilar
   e instalar la app nueva en el Poco F7.
+- 2026-11-08: comprobado que la migración 005 está aplicada (columna
+  `tickets.legs` accesible vía REST). APK release arm64 recompilado con Brave
+  cerrado (~23 s con caché caliente, 18.4 MB) e instalado en el Poco F7
+  (lastUpdateTime 2026-11-08 10:07:47, app abierta). El primer lote over 1.5 / 6
+  partidos se generará el 2026-11-09 a las 13:00 UTC.
