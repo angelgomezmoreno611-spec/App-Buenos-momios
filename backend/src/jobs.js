@@ -1,6 +1,7 @@
 import { generateBatch, dayKey, resultOf } from './tickets.js';
 import { deliverNotifications } from './push.js';
 import { syncCsv, CSV_LEAGUES, CSV_VALIDATION } from './csvleagues.js';
+import { oldbSnapshot, oldbResults, OLDB_LEAGUES, OLDB_VALIDATION, OLDB_ATTRIBUTION } from './openliga.js';
 
 const DAY = 86_400_000;
 // Ligas de año natural (Brasileirão): la temporada AAAA se juega de abril a diciembre.
@@ -13,7 +14,7 @@ export function previousSeason(now = Date.now(), league = '') {
   return (d.getUTCMonth() >= 6 ? year : year - 1) - 1;
 }
 
-export async function runJob(kind, { repo, provider, push, timeZone, minProbability, csvLeagues, csvSync, market, legs, evidence, now = Date.now() }) {
+export async function runJob(kind, { repo, provider, push, timeZone, minProbability, csvLeagues, csvSync, market, legs, evidence, openLiga, now = Date.now() }) {
   const owner = await repo.acquireLock();
   if (!owner) return { skipped: true, reason: 'Hay otra tarea ejecutándose o se está respetando el límite del proveedor' };
   const deadline = Date.now() + 45_000;
@@ -44,6 +45,20 @@ export async function runJob(kind, { repo, provider, push, timeZone, minProbabil
             ...(measured.length ? [`Acierto medido por partido en 2022-2026 con umbral ${minProbability} (selecciones): ${measured.join(', ')}.`] : [])];
         }
       }
+      // OpenLigaDB (3. Liga): consulta directa, gratis; si falla, se sigue sin ella.
+      if (openLiga?.leagues?.length) {
+        const oldb = await oldbSnapshot(openLiga.leagues, { now, get: openLiga.get }).catch(() => null);
+        if (!oldb) snapshot.warnings = [...(snapshot.warnings ?? []), 'OpenLigaDB no disponible en esta tanda.'];
+        else {
+          snapshot.history.push(...oldb.history);
+          snapshot.fixtures = [...snapshot.fixtures, ...oldb.fixtures];
+          const table = OLDB_VALIDATION[market ?? 'OVER_2_5'] ?? {};
+          const measured = openLiga.leagues.filter(c => table[c])
+            .map(c => `${OLDB_LEAGUES[c].name} ${Math.round(table[c].hitRate * 100)}% (${table[c].picks})`);
+          if (oldb.fixtures.length) snapshot.warnings = [...(snapshot.warnings ?? []), OLDB_ATTRIBUTION,
+            ...(measured.length ? [`Acierto medido por partido en 2022-2026 con umbral ${minProbability} (selecciones): ${measured.join(', ')}.`] : [])];
+        }
+      }
       const batch = generateBatch(snapshot, { now, timeZone, minProbability, excludedIds, market, legs, evidence });
       const publishedId = await repo.publish(batch);
       return { batchId: publishedId, tickets: batch.tickets.length, missingMatches: batch.missingMatches };
@@ -55,6 +70,12 @@ export async function runJob(kind, { repo, provider, push, timeZone, minProbabil
       const marketOf = new Map(pending.map(x => [x.match_id, x.market ?? 'OVER_2_5']));
       const ids = all.filter(id => id.startsWith('fd-')), csvIds = all.filter(id => id.startsWith('fdu-'));
       const results = [];
+      // OpenLigaDB: una consulta pequeña por partido pendiente (máx. 10 por ejecución).
+      const oldbIds = all.filter(id => id.startsWith('oldb-'));
+      if (oldbIds.length && openLiga?.get) {
+        const matches = await oldbResults(oldbIds, { get: openLiga.get }).catch(() => []);
+        results.push(...matches.map(m => ({ matchId: m.id, ...resultOf(m, marketOf.get(m.id)) })));
+      }
       // Ligas CSV: el resultado ya está en la base (job csv); sin consultas externas.
       for (let i = 0; i < csvIds.length; i += 100) {
         const matches = await repo.csvResults(csvIds.slice(i, i + 100)).catch(() => []);

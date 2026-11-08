@@ -24,7 +24,7 @@ async function readJson(req) {
   catch { throw Object.assign(new Error('JSON inválido'), { status: 400 }); }
 }
 
-export function createApp({ mode = 'live', repo, provider, push, cronSecret, timeZone = 'America/Mazatlan', minProbability = 0.65, allowedOrigin, footballService, csvLeagues = [], market = 'OVER_2_5', legs = 4, evidence = null }) {
+export function createApp({ mode = 'live', repo, provider, push, cronSecret, timeZone = 'America/Mazatlan', minProbability = 0.65, allowedOrigin, footballService, csvLeagues = [], market = 'OVER_2_5', legs = 4, evidence = null, openLiga = null }) {
   if (!['live', 'demo'].includes(mode)) throw new Error('DATA_MODE debe ser live o demo');
   let demo;
   const send = (res, status, value) => { res.statusCode = status; res.end(JSON.stringify(value)); };
@@ -46,7 +46,7 @@ export function createApp({ mode = 'live', repo, provider, push, cronSecret, tim
         const kind = path.split('/').at(-1);
         if (!['generate', 'settle', 'notify', 'history', 'csv'].includes(kind)) return send(res, 404, { error: 'Tarea desconocida' });
         if (mode === 'demo') return send(res, 409, { error: 'Las tareas reales están desactivadas en demo' });
-        return send(res, 200, await runJob(kind, { repo, provider, push, timeZone, minProbability, csvLeagues, market, legs, evidence }));
+        return send(res, 200, await runJob(kind, { repo, provider, push, timeZone, minProbability, csvLeagues, market, legs, evidence, openLiga }));
       }
       const footballRoute = ['/api/football/sources', '/api/football/matches', '/api/football/match'].includes(path);
       if (!footballRoute && !['/api/tickets', '/api/history', '/api/subscriptions', '/api/devices'].includes(path)) return send(res, 404, { error: 'Ruta no encontrada' });

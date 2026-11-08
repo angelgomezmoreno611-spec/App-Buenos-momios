@@ -79,6 +79,10 @@ En over 1.5 se excluyen LaLiga y Serie A (`MARKET_BLOCKED`, acierto medido bajo)
   `csv_sync_runs`; `generate` y `settle` solo leen de la tabla (IDs `fdu-`).
   Ligas activas = las que pasaron backtest (`CSV_VALIDATION`); `CSV_COMPETITIONS`
   las cambia (`none` desactiva). Si la app se vuelve comercial, desactivarlas.
+- `src/openliga.js`: 3. Liga desde OpenLigaDB (gratis, sin clave, ODbL: la tanda
+  incluye la atribución). Solo en over 1.5 (validada); `OPENLIGADB_COMPETITIONS`
+  (`none` desactiva). generate descarga 2 temporadas; settle consulta cada partido
+  pendiente (IDs `oldb-`, máx. 10 por ejecución). Fallos no detienen la tanda.
 - `src/football/`: módulo independiente de información de partidos con ocho
   adaptadores (`providers.js`), normalizador común, transporte HTTP secuencial con
   límite de 2 MB por respuesta (`http.js`, compartido con `FootballData` para

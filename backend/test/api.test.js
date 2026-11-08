@@ -258,3 +258,31 @@ test('settle aplica el mercado de cada selección (over 1.5 con 1-1 gana)', asyn
   await runJob('settle', { repo, provider: {}, now: Date.now() });
   assert.deepEqual(applied.map(r => [r.matchId, r.result]), [['fdu-NOR-a', 'won'], ['fdu-NOR-b', 'lost']]);
 });
+test('generate suma la 3. Liga con atribución y settle la liquida en over 1.5', async () => {
+  const now = Date.parse('2026-11-05T17:00:00Z'), full = demoSnapshot(now);
+  // Partidos demo con forma de respuesta de OpenLigaDB.
+  const asOldb = (m, i) => ({ matchID: 1000 + i, leagueShortcut: 'bl3', matchDateTimeUTC: m.kickoff, matchIsFinished: m.status === 'FINISHED',
+    team1: { teamId: Number(m.home.id.replace(/\D/g, '')) || 1, teamName: m.home.name },
+    team2: { teamId: Number(m.away.id.replace(/\D/g, '')) || 2, teamName: m.away.name },
+    matchResults: m.status === 'FINISHED' ? [{ resultTypeID: 2, pointsTeam1: m.homeGoals, pointsTeam2: m.awayGoals }] : [] });
+  const season = [...full.history, ...full.fixtures].map(asOldb);
+  let published;
+  const repo = { acquireLock: async () => 'lease', releaseLock: async () => {}, getBatch: async () => null,
+    usedMatches: async () => [], publish: async batch => { published = batch; return batch.id; }, history: async () => [] };
+  const provider = { competitions: () => ['PL'], snapshot: async () => ({ ...full, history: [], fixtures: [] }) };
+  const openLiga = { leagues: ['BL3'], get: async url => url.endsWith('/2026') ? season : [] };
+  const result = await runJob('generate', { repo, provider, now, minProbability: 0.5, market: 'OVER_1_5', legs: 6, openLiga });
+  assert.ok(result.tickets >= 1);
+  assert.ok(published.tickets.every(t => t.selections.every(s => s.match.id.startsWith('oldb-') && s.market === 'OVER_1_5')));
+  assert.ok(published.warnings.includes('Datos de 3. Liga: OpenLigaDB (licencia ODbL).'));
+  openLiga.get = async () => { throw new Error('caída'); };
+  await runJob('generate', { repo, provider, now, minProbability: 0.5, market: 'OVER_1_5', legs: 6, openLiga });
+  assert.ok(published.warnings.includes('OpenLigaDB no disponible en esta tanda.'));
+  const applied = [];
+  const settleRepo = { acquireLock: async () => 'lease', releaseLock: async () => {},
+    pendingMatches: async () => [{ match_id: 'oldb-7', market: 'OVER_1_5' }], applyResults: async r => applied.push(...r) };
+  const get = async () => ({ matchID: 7, leagueShortcut: 'bl3', matchDateTimeUTC: '2026-11-01T13:00:00Z', matchIsFinished: true,
+    team1: { teamId: 1, teamName: 'A' }, team2: { teamId: 2, teamName: 'B' }, matchResults: [{ resultTypeID: 2, pointsTeam1: 1, pointsTeam2: 1 }] });
+  await runJob('settle', { repo: settleRepo, provider: {}, now, openLiga: { leagues: ['BL3'], get } });
+  assert.deepEqual(applied, [{ matchId: 'oldb-7', result: 'won', score: '1–1' }]);
+});

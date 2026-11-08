@@ -8,7 +8,7 @@ fuentes oficiales. Preparar un conector no concede acceso al servicio.
 
 | Fuente | Plan gratuito y límites | Estado |
 | --- | --- | --- |
-| [OpenLigaDB](https://openligadb.de/) | Sin clave, datos comunitarios ODbL; calendario, resultados, estadios y goles | Integrada y comprobada en vivo |
+| [OpenLigaDB](https://openligadb.de/) | Sin clave, datos comunitarios ODbL; calendario, resultados, estadios y goles | Integrada y comprobada en vivo; 3. Liga también alimenta los tickets de over 1.5 (`src/openliga.js`) |
 | [OpenFootball](https://github.com/openfootball/football.json) | JSON CC0 sin clave; calendarios/históricos, sin seguimiento en directo ni hora UTC verificable | Integrada y comprobada en vivo |
 | [football-data.org](https://www.football-data.org/pricing) | Token gratuito, 12 competiciones y 10 llamadas/minuto; resultados retrasados | Integrada; falta token local |
 | [API-Football](https://www.api-football.com/pricing) | 100 llamadas/día; temporadas restringidas; fichas con estadísticas, eventos y alineaciones según cobertura | Conector probado con respuestas simuladas; falta clave |

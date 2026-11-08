@@ -6,6 +6,7 @@ import { FootballHttp } from './football/http.js';
 import { FootballService } from './football/service.js';
 import { CSV_LEAGUES, defaultCsvLeagues } from './csvleagues.js';
 import { MARKETS } from './tickets.js';
+import { OLDB_LEAGUES, defaultOldbLeagues } from './openliga.js';
 import { EVIDENCE } from './model.js';
 
 export function configuredApp(env = process.env) {
@@ -26,6 +27,11 @@ export function configuredApp(env = process.env) {
   const csvLeagues = env.CSV_COMPETITIONS === undefined ? defaultCsvLeagues(market)
     : env.CSV_COMPETITIONS.trim() === 'none' ? [] : [...new Set(env.CSV_COMPETITIONS.split(',').map(x => x.trim()).filter(Boolean))];
   if (csvLeagues.some(code => !CSV_LEAGUES[code])) throw new Error('CSV_COMPETITIONS contiene una liga no compatible');
+  // OpenLigaDB (3. Liga): "none" la desactiva.
+  const oldbLeagues = env.OPENLIGADB_COMPETITIONS === undefined ? defaultOldbLeagues(market)
+    : env.OPENLIGADB_COMPETITIONS.trim() === 'none' ? [] : env.OPENLIGADB_COMPETITIONS.split(',').map(x => x.trim()).filter(Boolean);
+  if (oldbLeagues.some(code => !OLDB_LEAGUES[code])) throw new Error('OPENLIGADB_COMPETITIONS contiene una liga no compatible');
+  const openLiga = { leagues: oldbLeagues, get: url => footballHttp.get('openligadb', url) };
   // Un proveedor por instancia de la API, creado solo cuando un job lo necesita.
   // Auth, historial y lectura de tickets funcionan sin token de fútbol.
   let football;
@@ -36,7 +42,7 @@ export function configuredApp(env = process.env) {
     return football ??= new FootballData({ token: env.FOOTBALL_DATA_TOKEN.trim(), competitions: env.FOOTBALL_COMPETITIONS,
       fetcher: async (url, options) => Response.json(await footballHttp.get('football-data', url, options.headers)) });
   };
-  return createApp({ ...common, csvLeagues, market, legs, minProbability, evidence: EVIDENCE[market] ?? null,
+  return createApp({ ...common, csvLeagues, openLiga, market, legs, minProbability, evidence: EVIDENCE[market] ?? null,
     repo: new SupabaseRepository({ url: env.SUPABASE_URL,
       secretKey: env.SUPABASE_SECRET_KEY, publishableKey: env.SUPABASE_PUBLISHABLE_KEY,
       serviceKey: env.SUPABASE_SERVICE_ROLE_KEY, anonKey: env.SUPABASE_ANON_KEY }),

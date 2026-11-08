@@ -520,3 +520,11 @@ No se dejaron servidores activos ni se desplegó el proyecto.
   `dayKey` ya sea el día nuevo) y momios-history '42 6 * * *' (23:42 local).
   settle y csv sin cambios. Actualizado `schedule.example.sql`; el usuario debe
   aplicar el cambio con `cron.alter_job` en Supabase.
+- 2026-11-08: fuentes gratuitas extra. OpenFootball 2026-27 solo tiene ligas ya
+  cubiertas (no añade partidos), pero sirvió para validar ligas de producción sin
+  medir, over 1.5 ≥0.80 (script `bt-extra.mjs`): Championship 193 sel./80.8%,
+  Eredivisie 617/87.7%, Portugal 163/81.6% → se mantienen. 3. Liga (OpenLigaDB,
+  2021-2026): over 1.5 437 sel./81.2% → activada; over 2.5 118/57.6% → no.
+  Implementado `src/openliga.js` (ODbL con atribución en la tanda), generate y
+  settle con fallo tolerante. 56/56 pruebas. Prueba real: 411 partidos de
+  historial; la 3. Liga vuelve el 20-22 nov tras el parón.
