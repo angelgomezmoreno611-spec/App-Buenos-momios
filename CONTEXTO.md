@@ -418,3 +418,15 @@ No se dejaron servidores activos ni se desplegó el proyecto.
   (antes eran 32/33). Comprobado: la falta de muestra quedó resuelta; tener
   pocos tickets es el umbral 0.65 funcionando, no un fallo.
   Pendiente: programar los crons (history 12:50, generate 13:00 UTC, etc.).
+- 2026-11-08 (UTC): el usuario ejecutó en Supabase el SQL de programación
+  (pg_cron + pg_net + Vault con `buenos_momios_api_url` y
+  `buenos_momios_cron_secret`). Activos: momios-history 12:42, momios-generate
+  13:00, momios-settle :05/:20/:35/:50 (UTC). notify no se programó porque
+  Firebase no está configurado. Comprobado en logs de Vercel: POST
+  /api/jobs/settle a las 06:05:00 UTC respondió 200. history se movió a 12:42 en
+  `schedule.example.sql` para no coincidir con settle a las 12:50 (lock de 70 s).
+  El archivo temporal con el secreto se borró.
+  Opciones de cobertura presentadas (sin decidir): A) añadir BSA y CLI (incluidas
+  en el plan gratuito de football-data.org); B) CSV de football-data.co.uk para
+  validar Brasil/México; C) Wikipedia para Honduras/Costa Rica; D) carga manual;
+  E) scraping descartado por términos de uso.
