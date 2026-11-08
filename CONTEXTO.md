@@ -407,3 +407,14 @@ No se dejaron servidores activos ni se desplegó el proyecto.
   003 en Supabase (SQL Editor) y borrar el lote vacío del 2026-11-07
   (786789d2-c527-4845-9331-28fc8fb1bb19) para regenerar hoy. Después: ejecutar
   history, esperar >70 s y ejecutar generate.
+- 2026-11-07: el usuario aplicó la migración 003 y borró el lote vacío.
+  Job history en producción: temporada 2025 guardada en las 8 ligas
+  (PL 380, PD 380, BL1 306, SA 380, FL1 305, DED 306, PPL 306, ELC 556;
+  2919 partidos, remaining 0). Job generate: lote
+  c7086606-0fe6-47fb-821e-e5112abfc04c (día 2026-11-07, partidos del 08-11) con
+  **1 ticket** (conjunta estimada 0.23): Cambuur-PSV 0.761, Freiburg-Union
+  Berlin 0.699, Köln-Leverkusen 0.660, AZ-Groningen 0.653. 4 elegibles; de 30
+  rechazados, 25 por probabilidad < 0.65 y solo 5 por muestra insuficiente
+  (antes eran 32/33). Comprobado: la falta de muestra quedó resuelta; tener
+  pocos tickets es el umbral 0.65 funcionando, no un fallo.
+  Pendiente: programar los crons (history 12:50, generate 13:00 UTC, etc.).
