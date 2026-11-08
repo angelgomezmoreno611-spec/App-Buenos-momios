@@ -542,3 +542,6 @@ No se dejaron servidores activos ni se desplegó el proyecto.
   2. Bundesliga (79.4%, bajo el corte). App: ticket arriesgado aparte con borde
   naranja. 59/59 backend, 13/13 Flutter, analyze limpio. PENDIENTE: usuario aplica
   006 y se recompila la app.
+- 2026-11-08: comprobado que la migración 006 está aplicada (`tickets.kind`
+  accesible). APK recompilado con Brave cerrado (24 s) e instalado en el Poco F7
+  con soporte del ticket arriesgado.
