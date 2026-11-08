@@ -7,8 +7,8 @@
 -- Avisos: desfase de 2 minutos para evitar el lock y la cuota de fútbol.
 
 -- Histórico: guarda una vez la temporada anterior de cada liga (sin coste si ya está).
--- Debe ir antes de generate y con más de 70 s de separación por el lock.
-select cron.schedule('momios-history', '50 12 * * *', $$
+-- Debe ir antes de generate y lejos de settle (:05,:20,:35,:50) por el lock de 70 s.
+select cron.schedule('momios-history', '42 12 * * *', $$
   select net.http_post(
     url := (select decrypted_secret from vault.decrypted_secrets where name = 'buenos_momios_api_url') || '/api/jobs/history',
     headers := jsonb_build_object('Content-Type','application/json','Authorization',
