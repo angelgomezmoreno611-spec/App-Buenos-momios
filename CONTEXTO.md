@@ -465,3 +465,18 @@ No se dejaron servidores activos ni se desplegó el proyecto.
   (tablas vacías accesibles vía REST) y `momios-csv` activo ('27 12 * * 2,5')
   junto a generate, history y settle. Próximo paso: el martes 10 revisar
   `csv_sync_runs`, filas en `csv_matches` y la tanda de las 13:00 UTC.
+- 2026-11-08: backtests de rentabilidad con cuotas de cierre (CSV ya descargados,
+  sin descargas nuevas; scripts en scratchpad `bt-dc.mjs` y `bt-ou.mjs`).
+  Doble oportunidad (25 ligas, 60 867 predicciones): Brier modelo 0.2086 vs
+  mercado 0.1990; ROI −5% a −7% en todos los umbrales; cuando el modelo difiere
+  ≥5 pt del mercado, ROI −12%. Ticket de 4 a ≥0.80: ~53% de acierto, ~−14%.
+  Decisión recomendada: NO añadir doble oportunidad.
+  Over 2.5 (11 divisiones "main" con cuotas: B1, D2, F2, G1, I2, SC0-3, SP2, T1;
+  10 796 predicciones desde 2022-07): Brier modelo 0.2483 vs mercado 0.2411.
+  Selecciones ≥0.65: 350, acierto 60.6% (el mercado ya esperaba 61.9%), cuota
+  media 1.54, ROI −8.5% (−5.0% con la mejor cuota). T1 (activada): ROI −7.2%.
+  Tickets de 4 simulados: 87, acertados 11.5%, ROI −44%. Seleccionar por
+  probabilidad del mercado ≥0.65 acierta más (71.8%) pero ROI −2.4%.
+  Comprobado: el modelo no tiene ventaja sobre las casas en estas ligas.
+  NO medido: las 8 ligas de producción (PL, PD, BL1, SA, FL1, DED, PPL, ELC)
+  porque no hay cuotas en disco; supuesto razonable: mercados aún más eficientes.
