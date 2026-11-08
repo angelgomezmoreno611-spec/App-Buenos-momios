@@ -515,3 +515,8 @@ No se dejaron servidores activos ni se desplegó el proyecto.
   72.7%/48.9%, 91 sel. 79.1%; Guatemala 67.7%/44.6%, 23 sel. 73.9%; El Salvador
   70.2%/42.8%, 23 sel. 73.9%. Ninguna alcanza el criterio (≥80%); son ligas de
   menos goles que las europeas activadas. No se recomienda pagar Pro para ellas.
+- 2026-11-08: el usuario pidió actualizar los tickets a medianoche de Mazatlán
+  (UTC-7 fijo). Nuevo horario: momios-generate '1 7 * * *' (00:01 local, para que
+  `dayKey` ya sea el día nuevo) y momios-history '42 6 * * *' (23:42 local).
+  settle y csv sin cambios. Actualizado `schedule.example.sql`; el usuario debe
+  aplicar el cambio con `cron.alter_job` en Supabase.

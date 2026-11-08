@@ -3,12 +3,13 @@
 -- Crea en Vault dos secretos mediante el dashboard (sin pegarlos en este repo):
 --   buenos_momios_api_url = https://TU-API.vercel.app
 --   buenos_momios_cron_secret = el mismo CRON_SECRET del servidor
--- Horarios en UTC. 13:00 UTC = 06:00 en America/Mazatlan.
+-- Horarios en UTC. Mazatlán es UTC-7 todo el año: 07:01 UTC = 00:01 en America/Mazatlan.
+-- generate va a las 00:01 (no 00:00) para que el día local ya haya cambiado.
 -- Avisos: desfase de 2 minutos para evitar el lock y la cuota de fútbol.
 
 -- Histórico: guarda una vez la temporada anterior de cada liga (sin coste si ya está).
 -- Debe ir antes de generate y lejos de settle (:05,:20,:35,:50) por el lock de 70 s.
-select cron.schedule('momios-history', '42 12 * * *', $$
+select cron.schedule('momios-history', '42 6 * * *', $$
   select net.http_post(
     url := (select decrypted_secret from vault.decrypted_secrets where name = 'buenos_momios_api_url') || '/api/jobs/history',
     headers := jsonb_build_object('Content-Type','application/json','Authorization',
@@ -26,7 +27,7 @@ select cron.schedule('momios-csv', '27 12 * * 2,5', $$
     body := '{}'::jsonb, timeout_milliseconds := 60000
   );
 $$);
-select cron.schedule('momios-generate', '0 13 * * *', $$
+select cron.schedule('momios-generate', '1 7 * * *', $$
   select net.http_post(
     url := (select decrypted_secret from vault.decrypted_secrets where name = 'buenos_momios_api_url') || '/api/jobs/generate',
     headers := jsonb_build_object('Content-Type','application/json','Authorization',
