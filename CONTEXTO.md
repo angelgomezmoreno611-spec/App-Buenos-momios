@@ -461,5 +461,7 @@ No se dejaron servidores activos ni se desplegó el proyecto.
   rinden mal con este modelo (ver entrada anterior). 50/50 pruebas.
   Descargas de hoy para el backtest: ~80 archivos (manual, investigación); no se
   ejecutó el job csv para no gastar el cupo semanal: la primera descarga
-  automática será el martes 2026-11-10. PENDIENTE usuario: aplicar migración 004
-  y programar `momios-csv` en Supabase.
+  automática será el martes 2026-11-10. Comprobado: migración 004 aplicada
+  (tablas vacías accesibles vía REST) y `momios-csv` activo ('27 12 * * 2,5')
+  junto a generate, history y settle. Próximo paso: el martes 10 revisar
+  `csv_sync_runs`, filas en `csv_matches` y la tanda de las 13:00 UTC.
