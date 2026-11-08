@@ -503,3 +503,15 @@ No se dejaron servidores activos ni se desplegó el proyecto.
   cerrado (~23 s con caché caliente, 18.4 MB) e instalado en el Poco F7
   (lastUpdateTime 2026-11-08 10:07:47, app abierta). El primer lote over 1.5 / 6
   partidos se generará el 2026-11-09 a las 13:00 UTC.
+- 2026-11-08: lote del día regenerado (el de over 2.5 tenía 0 tickets; el
+  usuario autorizó borrarlo): b8d47d65… con 0 tickets en over 1.5/6 porque solo
+  había 7 partidos en las próximas 72 h (domingo tarde + parón de selecciones
+  9-17 nov). API-Football: clave del usuario guardada en `backend/.env`
+  (API_FOOTBALL_KEY; quedó escrita en el chat, recomendar regenerarla). Plan Free
+  comprobado: 100/día y SIN temporada actual ("Free plans do not have access to
+  this season, try from 2022 to 2024") → no sirve para tickets. Backtest con
+  2022-2024 (12 consultas, script `bt-af.mjs`): tasas over 1.5/over 2.5 y
+  selecciones ≥0.80 en over 1.5: Honduras 72.4%/48.2%, 57 sel. 71.9%; Costa Rica
+  72.7%/48.9%, 91 sel. 79.1%; Guatemala 67.7%/44.6%, 23 sel. 73.9%; El Salvador
+  70.2%/42.8%, 23 sel. 73.9%. Ninguna alcanza el criterio (≥80%); son ligas de
+  menos goles que las europeas activadas. No se recomienda pagar Pro para ellas.
