@@ -16,6 +16,16 @@ select cron.schedule('momios-history', '42 12 * * *', $$
     body := '{}'::jsonb, timeout_milliseconds := 60000
   );
 $$);
+-- Ligas CSV (football-data.co.uk): su política permite máx. 2 descargas
+-- automáticas por semana. Martes y viernes 12:27 UTC, tras sus actualizaciones.
+select cron.schedule('momios-csv', '27 12 * * 2,5', $$
+  select net.http_post(
+    url := (select decrypted_secret from vault.decrypted_secrets where name = 'buenos_momios_api_url') || '/api/jobs/csv',
+    headers := jsonb_build_object('Content-Type','application/json','Authorization',
+      'Bearer ' || (select decrypted_secret from vault.decrypted_secrets where name = 'buenos_momios_cron_secret')),
+    body := '{}'::jsonb, timeout_milliseconds := 60000
+  );
+$$);
 select cron.schedule('momios-generate', '0 13 * * *', $$
   select net.http_post(
     url := (select decrypted_secret from vault.decrypted_secrets where name = 'buenos_momios_api_url') || '/api/jobs/generate',
@@ -42,4 +52,4 @@ select cron.schedule('momios-notify', '7,22,37,52 * * * *', $$
 $$);
 -- Consultar ejecuciones: select * from cron.job_run_details order by start_time desc limit 20;
 -- Consultar respuestas HTTP: select * from net._http_response order by created desc limit 20;
--- Pausar: select cron.unschedule('momios-settle'); (igual para history, generate y notify)
+-- Pausar: select cron.unschedule('momios-settle'); (igual para history, csv, generate y notify)

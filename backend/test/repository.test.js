@@ -83,3 +83,28 @@ test('histórico: guarda por bloques, marca la temporada al final y pagina la le
   assert.deepEqual(rows[0], { id: 'fd-0', league: { id: 'PL', name: 'Premier' }, kickoff: '2025-09-01T12:00:00.000Z', status: 'FINISHED',
     home: { id: 'fd-team-1', name: 'A' }, away: { id: 'fd-team-2', name: 'B' }, homeGoals: 2, awayGoals: 1, availableAt: '2026-11-07T12:00:00.000Z' });
 });
+test('partidos CSV: upsert por lotes, limpieza antigua y consulta de resultados', async () => {
+  const calls = [];
+  const repo = new SupabaseRepository({
+    url: 'https://example.supabase.co', secretKey: 'sb_secret_test', publishableKey: 'sb_publishable_test',
+    fetcher: async (url, options) => {
+      calls.push({ url, method: options.method ?? 'GET', body: options.body && JSON.parse(options.body) });
+      if ((options.method ?? 'GET') === 'GET') return Response.json(url.includes('csv_sync_runs') ? [{ id: 1 }] :
+        [{ id: 'fdu-NOR-2026-11-01-molde-brann', status: 'FINISHED', home_goals: 2, away_goals: 0 }]);
+      return new Response('');
+    }
+  });
+  const match = { id: 'fdu-NOR-2026-11-01-molde-brann', league: { id: 'NOR', name: 'Eliteserien' }, kickoff: '2026-11-01T17:00:00.000Z',
+    home: { id: 'fdu-NOR-molde', name: 'Molde' }, away: { id: 'fdu-NOR-brann', name: 'Brann' }, status: 'FINISHED',
+    homeGoals: 2, awayGoals: 0, availableAt: '2026-11-01T20:00:00.000Z' };
+  await repo.storeCsvMatches(Array(600).fill(match), Date.parse('2025-10-01T00:00:00Z'));
+  assert.deepEqual(calls.map(c => c.method), ['POST', 'POST', 'DELETE']);
+  assert.equal(calls[0].body.length, 500);
+  assert.equal(calls[0].body[0].status, 'FINISHED');
+  assert.match(calls[2].url, /csv_matches\?kickoff=lt\.2025-10-01T00%3A00%3A00\.000Z$/);
+  calls.length = 0;
+  const results = await repo.csvResults(['fdu-NOR-2026-11-01-molde-brann', 'fdu-T1-x"y']);
+  assert.deepEqual(results, [{ id: 'fdu-NOR-2026-11-01-molde-brann', status: 'FINISHED', homeGoals: 2, awayGoals: 0 }]);
+  assert.match(decodeURIComponent(calls[0].url), /id=in\.\("fdu-NOR-2026-11-01-molde-brann","fdu-T1-xy"\)&status=eq\.FINISHED/);
+  assert.equal(await repo.csvSyncsSince(0), 1);
+});

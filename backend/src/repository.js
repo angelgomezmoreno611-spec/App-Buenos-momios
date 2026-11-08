@@ -95,6 +95,48 @@ export class SupabaseRepository {
     }
     return out;
   }
+  // football-data.co.uk: máximo dos descargas automáticas por semana.
+  async csvSyncsSince(since) {
+    const rows = await this.request(`csv_sync_runs?ran_at=gte.${encodeURIComponent(new Date(since).toISOString())}&select=id&limit=10`);
+    return rows.length;
+  }
+  async recordCsvSync() {
+    await this.request('csv_sync_runs', { method: 'POST', body: [{}], headers: { Prefer: 'return=minimal' } });
+  }
+  async storeCsvMatches(matches, before) {
+    const rows = matches.map(m => ({
+      id: m.id, league: m.league.id, league_name: m.league.name, kickoff: m.kickoff,
+      home_id: m.home.id, home_name: m.home.name, away_id: m.away.id, away_name: m.away.name,
+      status: m.status, home_goals: m.homeGoals, away_goals: m.awayGoals, available_at: m.availableAt,
+      synced_at: new Date().toISOString()
+    }));
+    const upsert = { Prefer: 'resolution=merge-duplicates,return=minimal' };
+    for (let i = 0; i < rows.length; i += 500) {
+      await this.request('csv_matches?on_conflict=id', { method: 'POST', body: rows.slice(i, i + 500), headers: upsert });
+    }
+    // Fuera de la ventana del modelo ya no se usan.
+    await this.request(`csv_matches?kickoff=lt.${encodeURIComponent(new Date(before).toISOString())}`, { method: 'DELETE' });
+  }
+  async csvMatches(since) {
+    const out = [], filter = `kickoff=gte.${encodeURIComponent(new Date(since).toISOString())}`;
+    for (let offset = 0; offset < 50_000; offset += 1000) {
+      const rows = await this.request(`csv_matches?${filter}&select=*&order=id.asc&limit=1000&offset=${offset}`);
+      out.push(...rows.map(r => ({
+        id: r.id, league: { id: r.league, name: r.league_name }, kickoff: new Date(r.kickoff).toISOString(),
+        status: r.status, home: { id: r.home_id, name: r.home_name }, away: { id: r.away_id, name: r.away_name },
+        homeGoals: r.home_goals, awayGoals: r.away_goals,
+        availableAt: r.available_at ? new Date(r.available_at).toISOString() : null
+      })));
+      if (rows.length < 1000) break;
+    }
+    return out;
+  }
+  async csvResults(ids) {
+    if (!ids.length) return [];
+    const list = ids.map(id => `"${id.replace(/["\\]/g, '')}"`).join(',');
+    const rows = await this.request(`csv_matches?id=in.(${encodeURIComponent(list)})&status=eq.FINISHED&select=id,status,home_goals,away_goals`);
+    return rows.map(r => ({ id: r.id, status: r.status, homeGoals: r.home_goals, awayGoals: r.away_goals }));
+  }
   async acquireLock() { return this.rpc('acquire_job_lock', {}); }
   async releaseLock(owner) { return this.rpc('release_job_lock', { p_owner: owner }); }
   async claimNotifications() { return this.rpc('claim_notifications', {}); }

@@ -446,3 +446,20 @@ No se dejaron servidores activos ni se desplegó el proyecto.
   (2024: 66%, 2025: 74%, 2026: 70%) → apta, pero ahora está en playoffs (posible
   prórroga) y vuelve en febrero. Módulo `src/csvleagues.js` creado y probado,
   AÚN NO conectado a config/jobs. Pendiente decisión del usuario.
+- 2026-11-08: ligas extra vía CSV de football-data.co.uk. Comprobado en
+  contact.php: uso solo personal/académico, NO comercial, descarga automática
+  máx. 2 veces/semana. Diseño: job `/api/jobs/csv` (mar y vie 12:27 UTC) registra
+  el intento en `csv_sync_runs` y se niega si ya hubo 2 en 7 días; guarda
+  próximos partidos y resultados (400 días) en `csv_matches` (migración 004).
+  generate/settle solo leen la tabla y toleran que no exista (aviso, sin fallo).
+  Backtest por liga (2022-07 a 2026-11, umbral 0.65; script en scratchpad):
+  activadas NOR 157 sel./75.8%, SWE 50/74%, CHN 149/72.5%, SWZ 149/69.8%,
+  T1 71/66.2%, DNK 56/64.3%, USA 592/67.2% (MLS sin nov-dic por playoffs).
+  Rechazadas: D2 55.6%, B1 53.2%, AUT 54.2%, POL 57.9%, FIN 62.9% (borde);
+  muestra insuficiente: F2, I2, SP2, G1, ROU, JPN, IRL, SC0-SC3. Supuesto: hay
+  sesgo de selección al elegir las mejores de 22 ligas. Liga MX, ARG y BSA
+  rinden mal con este modelo (ver entrada anterior). 50/50 pruebas.
+  Descargas de hoy para el backtest: ~80 archivos (manual, investigación); no se
+  ejecutó el job csv para no gastar el cupo semanal: la primera descarga
+  automática será el martes 2026-11-10. PENDIENTE usuario: aplicar migración 004
+  y programar `momios-csv` en Supabase.

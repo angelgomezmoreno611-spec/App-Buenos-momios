@@ -19,7 +19,7 @@ fuentes oficiales. Preparar un conector no concede acceso al servicio.
 | [BeSoccer](https://api.besoccer.com/es/presupuestos) | El registro es gratis; no se confirmó un plan público gratuito de uso de API | Investigada; requiere contratación y documentación de acceso |
 | [ScoreBat](https://www.scorebat.com/video-api/docs/) | `free-feed` con token: hasta 50 videos de encuentros de al menos siete días | Investigada; no añade estadísticas actuales, sin integrar |
 | [StatsBomb / Hudl Open Data](https://github.com/hudl/open-data) | Archivos de competiciones seleccionadas para análisis histórico | Investigada; sin descargas masivas ni incorporación al modelo |
-| [Football-Data.co.uk](https://football-data.co.uk/contact.php) | CSV personal/académico; automatización ligera hasta dos veces por semana | Investigada; descarga automática desactivada por condiciones de uso |
+| [Football-Data.co.uk](https://football-data.co.uk/contact.php) | CSV solo para uso personal/académico (no comercial); automatización ligera hasta dos veces por semana | Integrada en `src/csvleagues.js`: job `/api/jobs/csv` martes y viernes, con tope de 2 descargas en 7 días registrado en `csv_sync_runs`. Si la app pasa a uso comercial, desactivar (`CSV_COMPETITIONS=none`) |
 | [Open-Meteo](https://open-meteo.com/en/pricing) | Clima sin clave para uso no comercial, hasta 10 000 consultas/día y atribución | Investigada; pendiente de coordenadas verificadas de estadios |
 | [TheSports](https://www.thesports.com/pricing) | Prueba de 15 días; no se confirmó plan permanente gratis | Investigada; no activada como fuente gratuita permanente |
 

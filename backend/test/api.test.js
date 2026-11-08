@@ -201,3 +201,51 @@ test('una liga sin partidos publicados no detiene la generación', async () => {
   const none = new FootballData({ token: 'private', competitions: 'BSA', fetcher: async () => Response.json({ matches: [] }) });
   await assert.rejects(none.snapshot(), /Ninguna liga/);
 });
+test('job csv respeta dos descargas por semana y registra antes de descargar', async () => {
+  const calls = [];
+  const repo = { acquireLock: async () => 'lease', releaseLock: async () => {},
+    csvSyncsSince: async since => { calls.push(['since', since]); return calls.filter(c => c[0] === 'record').length; },
+    recordCsvSync: async () => { calls.push(['record']); },
+    storeCsvMatches: async (rows, before) => { calls.push(['store', rows.length, before]); } };
+  const now = Date.parse('2026-11-10T12:27:00Z');
+  const csvSync = async (codes, opts) => { calls.push(['download', codes, opts.now]); return { fixtures: [{ id: 'f' }], results: [{ id: 'r' }], files: 3 }; };
+  assert.deepEqual(await runJob('csv', { repo, now, csvLeagues: ['NOR'], csvSync }), { files: 3, results: 1, fixtures: 1 });
+  assert.deepEqual(calls.map(c => c[0]), ['since', 'record', 'download', 'store']);
+  assert.equal(calls[0][1], now - 7 * 86_400_000);
+  await runJob('csv', { repo, now, csvLeagues: ['NOR'], csvSync });
+  const third = await runJob('csv', { repo, now, csvLeagues: ['NOR'], csvSync });
+  assert.equal(third.skipped, true);
+  assert.equal(calls.filter(c => c[0] === 'download').length, 2);
+  assert.equal((await runJob('csv', { repo, now, csvLeagues: [], csvSync })).skipped, true);
+});
+test('generate usa partidos CSV guardados y settle los liquida sin consultas externas', async () => {
+  const now = Date.parse('2026-11-05T17:00:00Z'), full = demoSnapshot(now);
+  const relabel = m => ({ ...m, id: `fdu-NOR-${m.id}`, league: { id: 'NOR', name: 'Eliteserien' } });
+  const csvRows = [...full.history, ...full.fixtures.map(m => ({ ...m, status: 'TIMED' }))].map(relabel);
+  let published;
+  const repo = { acquireLock: async () => 'lease', releaseLock: async () => {}, getBatch: async () => null,
+    usedMatches: async () => [], publish: async batch => { published = batch; return batch.id; },
+    history: async () => [], csvMatches: async () => csvRows };
+  const provider = { competitions: () => ['PL'], snapshot: async () => ({ ...full, history: [], fixtures: [] }) };
+  const result = await runJob('generate', { repo, provider, now, minProbability: 0.65, csvLeagues: ['NOR'] });
+  assert.equal(result.tickets, 4);
+  assert.ok(published.tickets.every(t => t.selections.every(s => s.match.id.startsWith('fdu-NOR-'))));
+  assert.ok(published.warnings.some(w => /football-data\.co\.uk/.test(w)));
+  assert.ok(published.warnings.some(w => /Eliteserien 76% \(157\)/.test(w)));
+  // Sin la tabla CSV (migración pendiente) se genera igual con las demás ligas.
+  repo.csvMatches = async () => { throw new Error('HTTP 404'); };
+  provider.snapshot = async () => ({ ...full, history: [] });
+  repo.history = async () => full.history;
+  const fallback = await runJob('generate', { repo, provider, now, minProbability: 0.65, csvLeagues: ['NOR'] });
+  assert.equal(fallback.tickets, 4);
+  assert.ok(published.warnings.includes('Ligas CSV no disponibles en esta tanda.'));
+  const applied = [], asked = [];
+  const settleRepo = { acquireLock: async () => 'lease', releaseLock: async () => {},
+    pendingMatches: async () => [{ match_id: 'fdu-NOR-x' }, { match_id: 'fdu-NOR-y' }],
+    csvResults: async ids => { asked.push(...ids); return [{ id: 'fdu-NOR-x', status: 'FINISHED', homeGoals: 2, awayGoals: 1 }]; },
+    applyResults: async r => applied.push(...r) };
+  const settled = await runJob('settle', { repo: settleRepo, provider: { results: async () => { throw new Error('no debe consultar'); } }, now });
+  assert.deepEqual(asked, ['fdu-NOR-x', 'fdu-NOR-y']);
+  assert.deepEqual(applied, [{ matchId: 'fdu-NOR-x', result: 'won', score: '2–1' }]);
+  assert.deepEqual(settled, { checked: 1, remaining: 1 });
+});

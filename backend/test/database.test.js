@@ -125,3 +125,17 @@ test('migración conserva las tandas y fechas del historial anterior', async () 
     assert.equal((await legacy.query('select count(*)::int n from public.devices')).rows[0].n, 1);
   } finally { await legacy.close(); }
 });
+test('csv_matches exige marcador en partidos terminados y solo admite service_role', async () => {
+  await db.exec(`set role service_role;
+    insert into public.csv_sync_runs default values;
+    insert into public.csv_matches(id, league, league_name, kickoff, home_id, home_name, away_id, away_name, status)
+      values ('fdu-NOR-2026-11-09-a-b', 'NOR', 'Eliteserien', now(), 'fdu-NOR-a', 'A', 'fdu-NOR-b', 'B', 'TIMED');
+    reset role;`);
+  await assert.rejects(db.exec(`insert into public.csv_matches(id, league, league_name, kickoff, home_id, home_name, away_id, away_name, status)
+    values ('fdu-NOR-2026-11-10-a-b', 'NOR', 'Eliteserien', now(), 'fdu-NOR-a', 'A', 'fdu-NOR-b', 'B', 'FINISHED')`), /check/);
+  await assert.rejects(db.exec(`insert into public.csv_matches(id, league, league_name, kickoff, home_id, home_name, away_id, away_name, status)
+    values ('fd-1', 'NOR', 'Eliteserien', now(), 'x', 'A', 'y', 'B', 'TIMED')`), /check/);
+  await assert.rejects(db.exec('set role anon; select * from public.csv_matches;'), /permission denied/);
+  await db.exec('reset role;');
+  assert.equal((await db.query('select count(*)::int n from public.csv_sync_runs')).rows[0].n, 1);
+});

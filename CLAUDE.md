@@ -63,13 +63,19 @@ cuatro partidos (sin repetir partidos), liquida resultados y prepara avisos.
   de lectura arranca sin `FOOTBALL_DATA_TOKEN`; solo los jobs lo exigen (503).
 - Flujo de tickets: `model.js` (Poisson con suavizado, no calibrado) →
   `tickets.js` (`generateBatch`, `ticketStatus`) → `jobs.js` (`runJob` para
-  `history`/`generate`/`settle`/`notify`, llamados por `/api/jobs/*` con `CRON_SECRET`;
+  `history`/`csv`/`generate`/`settle`/`notify`, llamados por `/api/jobs/*` con `CRON_SECRET`;
   `history` guarda la temporada anterior en `match_history` y `generate` la combina
   con la temporada actual) →
   `repository.js` (`SupabaseRepository`, REST de Supabase con clave secreta) y
   `push.js` (Firebase, opcional). `demo.js` genera datos sintéticos.
 - Rutas de usuario (`/api/tickets`, `/api/history`, `/api/subscriptions`,
   `/api/devices`, `/api/football/*`) verifican la sesión contra Supabase Auth.
+- `src/csvleagues.js`: ligas extra desde CSV de football-data.co.uk (sin API). Su
+  política: **solo uso personal y máx. 2 descargas automáticas/semana**. El job
+  `csv` (mar/vie) descarga y guarda en `csv_matches` (migración 004), con tope en
+  `csv_sync_runs`; `generate` y `settle` solo leen de la tabla (IDs `fdu-`).
+  Ligas activas = las que pasaron backtest (`CSV_VALIDATION`); `CSV_COMPETITIONS`
+  las cambia (`none` desactiva). Si la app se vuelve comercial, desactivarlas.
 - `src/football/`: módulo independiente de información de partidos con ocho
   adaptadores (`providers.js`), normalizador común, transporte HTTP secuencial con
   límite de 2 MB por respuesta (`http.js`, compartido con `FootballData` para
