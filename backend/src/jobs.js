@@ -2,10 +2,13 @@ import { generateBatch, dayKey, resultOf } from './tickets.js';
 import { deliverNotifications } from './push.js';
 
 const DAY = 86_400_000;
-// Ligas europeas: la temporada empieza en julio/agosto y se nombra por su año
-// de inicio (football-data usa ?season=AAAA). Devuelve la temporada anterior.
-export function previousSeason(now = Date.now()) {
+// Ligas de año natural (Brasileirão): la temporada AAAA se juega de abril a diciembre.
+const CALENDAR_YEAR = new Set(['BSA']);
+// Europa: la temporada empieza en julio/agosto y se nombra por su año de inicio
+// (football-data usa ?season=AAAA). Devuelve la temporada anterior de la liga.
+export function previousSeason(now = Date.now(), league = '') {
   const d = new Date(now), year = d.getUTCFullYear();
+  if (CALENDAR_YEAR.has(league)) return year - 1;
   return (d.getUTCMonth() >= 6 ? year : year - 1) - 1;
 }
 
@@ -41,17 +44,18 @@ export async function runJob(kind, { repo, provider, push, timeZone, minProbabil
       return { checked: results.length, remaining: Math.max(0, ids.length - results.length) };
     }
     if (kind === 'history') {
-      const season = previousSeason(now), stored = new Set(await repo.storedSeasons());
-      const pending = provider.competitions().filter(code => !stored.has(`${code}:${season}`));
+      const stored = new Set(await repo.storedSeasons());
+      const pending = provider.competitions().map(code => ({ code, season: previousSeason(now, code) }))
+        .filter(({ code, season }) => !stored.has(`${code}:${season}`));
       const loaded = [];
       // Una petición por liga; el lock deja 70 s entre tareas y la cuota es 10/min.
-      for (const code of pending.slice(0, 8)) {
+      for (const { code, season } of pending.slice(0, 8)) {
         if (Date.now() > deadline - 8000) break;
         const matches = await provider.season(code, season);
         await repo.storeHistory(code, season, matches);
         loaded.push({ league: code, season, matches: matches.length });
       }
-      return { season, loaded, remaining: pending.length - loaded.length };
+      return { loaded, remaining: pending.length - loaded.length };
     }
     if (kind === 'notify') return deliverNotifications(repo, push, deadline);
     throw new Error('Tarea desconocida');

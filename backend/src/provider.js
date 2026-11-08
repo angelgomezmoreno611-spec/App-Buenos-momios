@@ -25,12 +25,13 @@ export function normalizeMatch(row, fetchedAt = new Date().toISOString()) {
 }
 
 export class FootballData {
-  constructor({ token, competitions = 'PL,PD,BL1,SA,FL1,DED,PPL,ELC', fetcher = fetch }) {
+  constructor({ token, competitions = 'PL,PD,BL1,SA,FL1,DED,PPL,ELC,BSA', fetcher = fetch }) {
     if (!token) throw new Error('Falta FOOTBALL_DATA_TOKEN');
     this.token = token; this.fetcher = fetcher;
     this.competitions = [...new Set(competitions.split(',').map(x => x.trim()).filter(Boolean))];
-    if (!this.competitions.length || this.competitions.length > 8 || this.competitions.some(x => !LEAGUES.has(x))) {
-      throw new Error('Configura entre 1 y 8 ligas gratuitas compatibles');
+    // Cada generación hace una petición por liga; la cuota gratuita es 10/min.
+    if (!this.competitions.length || this.competitions.length > 9 || this.competitions.some(x => !LEAGUES.has(x))) {
+      throw new Error('Configura entre 1 y 9 ligas gratuitas compatibles');
     }
   }
   async get(path) {
@@ -44,18 +45,22 @@ export class FootballData {
     return response.json();
   }
   async snapshot(now = Date.now()) {
-    const fetchedAt = new Date(now).toISOString(), all = [];
-    // Máximo ocho solicitudes por generación; un lock compartido impide solapes.
+    const fetchedAt = new Date(now).toISOString(), all = [], empty = [];
+    // Máximo nueve solicitudes por generación; un lock compartido impide solapes.
     for (const code of this.competitions) {
       const data = await this.get(`/competitions/${code}/matches`);
-      if (!Array.isArray(data.matches) || data.matches.length === 0) throw new Error(`Liga ${code} sin datos`);
+      if (!Array.isArray(data.matches)) throw new Error(`Liga ${code} sin datos`);
+      // Entre temporadas (p. ej. Brasileirão en enero) una liga puede venir vacía.
+      if (!data.matches.length) { empty.push(code); continue; }
       all.push(...data.matches.map(row => normalizeMatch(row, fetchedAt)));
     }
+    if (!all.length) throw new Error('Ninguna liga devolvió partidos');
     return {
       source: 'football-data.org (plan gratuito, resultados con retraso)', fetchedAt,
       history: all.filter(m => m.status === 'FINISHED'),
       fixtures: all.filter(m => ['SCHEDULED', 'TIMED'].includes(m.status)),
-      warnings: ['Cobertura de la temporada disponible; sin cuotas, xG, alineaciones ni lesiones.']
+      warnings: ['Cobertura de la temporada disponible; sin cuotas, xG, alineaciones ni lesiones.',
+        ...(empty.length ? [`Sin partidos publicados: ${empty.join(', ')}.`] : [])]
     };
   }
   // Temporada completa (año de inicio) de una liga configurada: solo partidos

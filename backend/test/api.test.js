@@ -112,11 +112,13 @@ test('registro no acepta userId del body y valida batch, token y JSON', async ()
   assert.equal((await request(app, '/api/subscriptions', { method: 'POST', body: '{' })).status, 400);
   assert.equal((await request(app, '/api/subscriptions', { method: 'POST', body: 'a'.repeat(9000) })).status, 413);
 });
-test('proveedor conserva goles nulos, excluye prórroga y respeta 8 ligas', async () => {
+test('proveedor conserva goles nulos, excluye prórroga y respeta 9 ligas', async () => {
   const row = { id: 1, competition: { code: 'PL', name: 'Premier' }, homeTeam: { id: 1, name: 'A' }, awayTeam: { id: 2, name: 'B' }, utcDate: '2026-11-05T12:00:00Z', status: 'FINISHED', score: { duration: 'REGULAR', fullTime: { home: 2, away: null } } };
   assert.equal(normalizeMatch(row).awayGoals, null);
   assert.equal(normalizeMatch({ ...row, score: { ...row.score, duration: 'EXTRA_TIME' } }).status, 'UNKNOWN');
   assert.throws(() => new FootballData({ token: 'x', competitions: 'CL' }));
+  assert.throws(() => new FootballData({ token: 'x', competitions: 'PL,PD,BL1,SA,FL1,DED,PPL,ELC,BSA,PL2' }));
+  assert.equal(new FootballData({ token: 'x' }).competitions.length, 9);
   const provider = new FootballData({ token: 'private', competitions: 'PL', fetcher: async () => ({ ok: false, status: 429 }) });
   await assert.rejects(provider.snapshot(), /429/);
   await assert.rejects(provider.results(['bogus']), /inválido/);
@@ -150,14 +152,17 @@ test('history guarda solo temporadas anteriores pendientes', async () => {
   assert.equal(previousSeason(Date.parse('2026-11-07T12:00:00Z')), 2025);
   assert.equal(previousSeason(Date.parse('2027-03-01T12:00:00Z')), 2025);
   assert.equal(previousSeason(Date.parse('2027-07-15T12:00:00Z')), 2026);
+  // Brasileirão: temporada de año natural.
+  assert.equal(previousSeason(Date.parse('2026-11-07T12:00:00Z'), 'BSA'), 2025);
+  assert.equal(previousSeason(Date.parse('2027-03-01T12:00:00Z'), 'BSA'), 2026);
   const stored = [], requested = [];
   const repo = { acquireLock: async () => 'lease', releaseLock: async () => {},
     storedSeasons: async () => ['PL:2025'], storeHistory: async (...args) => { stored.push(args); } };
-  const provider = { competitions: () => ['PL', 'PD'],
+  const provider = { competitions: () => ['PL', 'PD', 'BSA'],
     season: async (code, year) => { requested.push(`${code}:${year}`); return [{ id: 'fd-1' }, { id: 'fd-2' }]; } };
-  const result = await runJob('history', { repo, provider, now: Date.parse('2026-11-07T12:00:00Z') });
-  assert.deepEqual(requested, ['PD:2025']);
-  assert.deepEqual(result, { season: 2025, loaded: [{ league: 'PD', season: 2025, matches: 2 }], remaining: 0 });
+  const result = await runJob('history', { repo, provider, now: Date.parse('2027-03-01T12:00:00Z') });
+  assert.deepEqual(requested, ['PD:2025', 'BSA:2026']);
+  assert.deepEqual(result, { loaded: [{ league: 'PD', season: 2025, matches: 2 }, { league: 'BSA', season: 2026, matches: 2 }], remaining: 0 });
   assert.equal(stored[0][0], 'PD');
 });
 test('generate combina el histórico guardado con la temporada actual', async () => {
@@ -184,4 +189,15 @@ test('proveedor descarga una temporada y conserva solo partidos terminados', asy
   assert.match(url, /competitions\/PL\/matches\?season=2025$/);
   assert.deepEqual(rows.map(r => r.id), ['fd-1']);
   await assert.rejects(provider.season('PD', 2025), /inválida/);
+});
+test('una liga sin partidos publicados no detiene la generación', async () => {
+  const row = { id: 7, competition: { code: 'PL', name: 'Premier' }, homeTeam: { id: 1, name: 'A' }, awayTeam: { id: 2, name: 'B' },
+    utcDate: '2026-11-09T12:00:00Z', status: 'TIMED', score: { duration: 'REGULAR', fullTime: {} } };
+  const provider = new FootballData({ token: 'private', competitions: 'PL,BSA',
+    fetcher: async u => Response.json({ matches: u.includes('/BSA/') ? [] : [row] }) });
+  const snapshot = await provider.snapshot();
+  assert.deepEqual(snapshot.fixtures.map(m => m.id), ['fd-7']);
+  assert.match(snapshot.warnings.at(-1), /BSA/);
+  const none = new FootballData({ token: 'private', competitions: 'BSA', fetcher: async () => Response.json({ matches: [] }) });
+  await assert.rejects(none.snapshot(), /Ninguna liga/);
 });
