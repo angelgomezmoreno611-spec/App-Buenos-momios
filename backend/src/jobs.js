@@ -13,7 +13,7 @@ export function previousSeason(now = Date.now(), league = '') {
   return (d.getUTCMonth() >= 6 ? year : year - 1) - 1;
 }
 
-export async function runJob(kind, { repo, provider, push, timeZone, minProbability, csvLeagues, csvSync, now = Date.now() }) {
+export async function runJob(kind, { repo, provider, push, timeZone, minProbability, csvLeagues, csvSync, market, legs, evidence, now = Date.now() }) {
   const owner = await repo.acquireLock();
   if (!owner) return { skipped: true, reason: 'Hay otra tarea ejecutándose o se está respetando el límite del proveedor' };
   const deadline = Date.now() + 45_000;
@@ -36,32 +36,35 @@ export async function runJob(kind, { repo, provider, push, timeZone, minProbabil
         const fixtures = (csv ?? []).filter(m => m.status === 'TIMED' && csvLeagues.includes(m.league.id));
         snapshot.fixtures = [...snapshot.fixtures, ...fixtures];
         if (fixtures.length) {
-          const measured = [...new Set(fixtures.map(m => m.league.id))].filter(c => CSV_VALIDATION[c])
-            .map(c => `${CSV_LEAGUES[c].name} ${Math.round(CSV_VALIDATION[c].hitRate * 100)}% (${CSV_VALIDATION[c].picks})`);
+          const table = CSV_VALIDATION[market ?? 'OVER_2_5'] ?? {};
+          const measured = [...new Set(fixtures.map(m => m.league.id))].filter(c => table[c])
+            .map(c => `${CSV_LEAGUES[c].name} ${Math.round(table[c].hitRate * 100)}% (${table[c].picks})`);
           snapshot.warnings = [...(snapshot.warnings ?? []),
             'Ligas de football-data.co.uk: datos actualizados dos veces por semana; sus resultados se liquidan con días de retraso.',
-            ...(measured.length ? [`Acierto medido por partido en 2022-2026 con umbral 0.65 (selecciones): ${measured.join(', ')}.`] : [])];
+            ...(measured.length ? [`Acierto medido por partido en 2022-2026 con umbral ${minProbability} (selecciones): ${measured.join(', ')}.`] : [])];
         }
       }
-      const batch = generateBatch(snapshot, { now, timeZone, minProbability, excludedIds });
+      const batch = generateBatch(snapshot, { now, timeZone, minProbability, excludedIds, market, legs, evidence });
       const publishedId = await repo.publish(batch);
       return { batchId: publishedId, tickets: batch.tickets.length, missingMatches: batch.missingMatches };
     }
     if (kind === 'settle') {
       const pending = await repo.pendingMatches(now);
       const all = [...new Set(pending.map(x => x.match_id))];
+      // Cada partido pertenece a una sola selección: su mercado decide si se acierta.
+      const marketOf = new Map(pending.map(x => [x.match_id, x.market ?? 'OVER_2_5']));
       const ids = all.filter(id => id.startsWith('fd-')), csvIds = all.filter(id => id.startsWith('fdu-'));
       const results = [];
       // Ligas CSV: el resultado ya está en la base (job csv); sin consultas externas.
       for (let i = 0; i < csvIds.length; i += 100) {
         const matches = await repo.csvResults(csvIds.slice(i, i + 100)).catch(() => []);
-        results.push(...matches.map(m => ({ matchId: m.id, ...resultOf(m) })));
+        results.push(...matches.map(m => ({ matchId: m.id, ...resultOf(m, marketOf.get(m.id)) })));
       }
       // Hasta 9 consultas por ejecución, bajo la cuota gratuita de 10/min.
       for (let i = 0; i < Math.min(ids.length, 450); i += 50) {
         if (Date.now() > deadline - 6000) break;
         const matches = await provider.results(ids.slice(i, i + 50));
-        results.push(...matches.map(m => ({ matchId: m.id, ...resultOf(m) })));
+        results.push(...matches.map(m => ({ matchId: m.id, ...resultOf(m, marketOf.get(m.id)) })));
       }
       if (results.length) await repo.applyResults(results);
       return { checked: results.length, remaining: Math.max(0, all.length - results.length) };

@@ -124,18 +124,29 @@ export function resultFiles(code, now) {
   return [0, 1].map(back => `${CSV_BASE}/mmz4281/${seasonCode(now, back)}/${spec.div}.csv`);
 }
 
-// Ligas activadas por defecto: las que superaron el backtest temporal
-// (2022-07 a 2026-11, umbral 0.65, mismo modelo) con al menos 40 selecciones y
-// un acierto no menor que el de las ligas europeas validadas (~65%).
-// Al elegir las mejores de 22 ligas hay sesgo de selección: el acierto real
-// probablemente será algo menor que el medido.
+// Ligas activadas por defecto según el mercado: las que superaron el backtest
+// temporal (2022-07 a 2026-11, mismo modelo). Over 2.5: umbral 0.65, al menos
+// 40 selecciones y acierto ≥ ~64%. Over 1.5: umbral 0.80, al menos 100
+// selecciones y acierto ≥ 80%. Al elegir las mejores de 22-25 ligas hay sesgo de
+// selección: el acierto real probablemente será algo menor que el medido.
 export const CSV_VALIDATION = {
-  NOR: { picks: 157, hitRate: 0.758 }, SWE: { picks: 50, hitRate: 0.74 },
-  CHN: { picks: 149, hitRate: 0.725 }, SWZ: { picks: 149, hitRate: 0.698 },
-  T1: { picks: 71, hitRate: 0.662 }, DNK: { picks: 56, hitRate: 0.643 },
-  USA: { picks: 592, hitRate: 0.672 }
+  OVER_2_5: {
+    NOR: { picks: 157, hitRate: 0.758 }, SWE: { picks: 50, hitRate: 0.74 },
+    CHN: { picks: 149, hitRate: 0.725 }, SWZ: { picks: 149, hitRate: 0.698 },
+    T1: { picks: 71, hitRate: 0.662 }, DNK: { picks: 56, hitRate: 0.643 },
+    USA: { picks: 592, hitRate: 0.672 }
+  },
+  OVER_1_5: {
+    USA: { picks: 952, hitRate: 0.84 }, NOR: { picks: 478, hitRate: 0.845 },
+    SWZ: { picks: 441, hitRate: 0.825 }, CHN: { picks: 428, hitRate: 0.829 },
+    T1: { picks: 400, hitRate: 0.805 }, B1: { picks: 316, hitRate: 0.864 },
+    MEX: { picks: 314, hitRate: 0.825 }, SWE: { picks: 256, hitRate: 0.816 },
+    DNK: { picks: 248, hitRate: 0.831 }, SC0: { picks: 236, hitRate: 0.809 },
+    FIN: { picks: 206, hitRate: 0.801 }, SC2: { picks: 171, hitRate: 0.813 },
+    SC3: { picks: 141, hitRate: 0.837 }, POL: { picks: 131, hitRate: 0.847 }
+  }
 };
-export const DEFAULT_CSV_LEAGUES = Object.keys(CSV_VALIDATION);
+export const defaultCsvLeagues = market => Object.keys(CSV_VALIDATION[market] ?? {});
 // MLS: noviembre y diciembre son playoffs (puede haber prórroga y penales).
 const SKIP_MONTHS = { USA: [10, 11] };
 

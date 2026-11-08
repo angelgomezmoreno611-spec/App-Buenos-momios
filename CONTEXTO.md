@@ -480,3 +480,21 @@ No se dejaron servidores activos ni se desplegó el proyecto.
   Comprobado: el modelo no tiene ventaja sobre las casas en estas ligas.
   NO medido: las 8 ligas de producción (PL, PD, BL1, SA, FL1, DED, PPL, ELC)
   porque no hay cuotas en disco; supuesto razonable: mercados aún más eficientes.
+- 2026-11-08: cambio de producto pedido por el usuario: over 1.5 y tickets de 6.
+  Backtest over 1.5 (2022-07 a hoy, umbral 0.80; script `bt-o15.mjs` en
+  scratchpad): PL 522 sel./85.1%, BL1 575/84.7%, FL1 239/86.2%, LaLiga 76/76.3%,
+  Serie A 80/70.0% (excluidas), Brasil 57/82.5%. Brier ≈ referencia de liga: el
+  modelo aporta poco sobre la tasa base; elige sobre todo ligas goleadoras.
+  Sin cuotas de over 1.5 en las fuentes: NO se pudo medir rentabilidad. Con
+  6 partidos de ~85%: ~38% de tickets acertados (si fueran independientes).
+  Ligas CSV para over 1.5 (≥100 sel. y ≥80%): USA, NOR, SWZ, CHN, T1, B1, MEX,
+  SWE, DNK, SC0, FIN, SC2, SC3, POL (Liga MX entra en over 1.5).
+  Código: `overLine`/`predict(..., {line})`, `MARKETS` y `MARKET_BLOCKED` en
+  tickets.js, `resultOf(match, market)`, settle lee `market` de cada selección,
+  config `TICKET_MARKET` (OVER_1_5), `TICKET_LEGS` (6), umbral por defecto según
+  mercado. Eliminado MIN_PROBABILITY=0.65 de Vercel y `.env`. Migración 005:
+  `tickets.legs` (4|6), mercado OVER_1_5, publish/apply_results por tamaño.
+  App: lee `line`/`legs` del lote (lotes antiguos: 2.5 y 4). 53/53 backend,
+  12/12 Flutter, analyze limpio. PENDIENTE: usuario aplica 005 ANTES de las
+  13:00 UTC del 2026-11-09 (si no, publish_batch rechaza el lote de 6); compilar
+  e instalar la app nueva en el Poco F7.

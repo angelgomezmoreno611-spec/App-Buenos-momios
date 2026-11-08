@@ -28,4 +28,27 @@ void main() {
     );
     expect(oneIn(batch.evidence!.fourPicks), '1 de cada 5');
   });
+
+  test('el lote lee mercado y tamaño, con valores antiguos por defecto', () {
+    final old = Batch({'warnings': <String>[], 'tickets': <Map>[]});
+    expect([old.lineLabel, old.legs, old.goalsNeeded], ['2.5', 4, 3]);
+    final now = Batch({
+      'warnings': <String>[],
+      'line': 1.5,
+      'legs': 6,
+      'tickets': [
+        {
+          'id': 't',
+          'number': 1,
+          'status': 'pending',
+          'probability': 0.4,
+          'selections': List.generate(6, (_) => {'market': 'OVER_1_5'}),
+        },
+      ],
+    });
+    expect([now.lineLabel, now.legs, now.goalsNeeded], ['1.5', 6, 2]);
+    expect([now.tickets.first.legs, now.tickets.first.lineLabel], [6, '1.5']);
+    final e = Evidence({'hitRate': 0.85});
+    expect(oneIn(e.ticketPicks(6)), '1 de cada 3');
+  });
 }

@@ -249,3 +249,12 @@ test('generate usa partidos CSV guardados y settle los liquida sin consultas ext
   assert.deepEqual(applied, [{ matchId: 'fdu-NOR-x', result: 'won', score: '2–1' }]);
   assert.deepEqual(settled, { checked: 1, remaining: 1 });
 });
+test('settle aplica el mercado de cada selección (over 1.5 con 1-1 gana)', async () => {
+  const applied = [];
+  const repo = { acquireLock: async () => 'lease', releaseLock: async () => {},
+    pendingMatches: async () => [{ match_id: 'fdu-NOR-a', market: 'OVER_1_5' }, { match_id: 'fdu-NOR-b', market: 'OVER_2_5' }],
+    csvResults: async () => [{ id: 'fdu-NOR-a', status: 'FINISHED', homeGoals: 1, awayGoals: 1 }, { id: 'fdu-NOR-b', status: 'FINISHED', homeGoals: 1, awayGoals: 1 }],
+    applyResults: async r => applied.push(...r) };
+  await runJob('settle', { repo, provider: {}, now: Date.now() });
+  assert.deepEqual(applied.map(r => [r.matchId, r.result]), [['fdu-NOR-a', 'won'], ['fdu-NOR-b', 'lost']]);
+});

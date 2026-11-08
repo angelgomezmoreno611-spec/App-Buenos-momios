@@ -8,6 +8,11 @@ class Batch {
   bool get isDemo => data['mode'] == 'demo';
   String get source => data['source'] as String;
   int get missing => data['missingMatches'] as int;
+  // Lotes antiguos no traen estos campos: over 2.5 y 4 partidos.
+  double get line => (data['line'] as num?)?.toDouble() ?? 2.5;
+  int get legs => (data['legs'] as num?)?.toInt() ?? 4;
+  String get lineLabel => line.toStringAsFixed(1);
+  int get goalsNeeded => line.floor() + 1;
   List<String> get warnings => List<String>.from(data['warnings'] as List);
   Evidence? get evidence => data['evidence'] is Map
       ? Evidence(Map<String, dynamic>.from(data['evidence'] as Map))
@@ -26,8 +31,16 @@ class Evidence {
   double get threshold => (data['threshold'] as num).toDouble();
   int get picks => data['picks'] as int;
   double get hitRate => (data['hitRate'] as num).toDouble();
-  // Cuatro selecciones con ese acierto, suponiendo independencia.
-  double get fourPicks => hitRate * hitRate * hitRate * hitRate;
+  // N selecciones con ese acierto, suponiendo independencia.
+  double ticketPicks(int legs) {
+    var p = 1.0;
+    for (var i = 0; i < legs; i++) {
+      p *= hitRate;
+    }
+    return p;
+  }
+
+  double get fourPicks => ticketPicks(4);
   String get summary =>
       'En $period ($leagues), los partidos con ${percent(threshold)} o más '
       'acertaron el ${percent(hitRate)} de $picks.';
@@ -43,6 +56,8 @@ class Ticket {
   List<Pick> get picks => (data['selections'] as List)
       .map((p) => Pick(Map<String, dynamic>.from(p as Map)))
       .toList();
+  int get legs => (data['selections'] as List).length;
+  String get lineLabel => picks.isEmpty ? '2.5' : picks.first.lineLabel;
 }
 
 class Pick {
@@ -56,6 +71,8 @@ class Pick {
   DateTime get kickoff => DateTime.parse(match['kickoff'] as String).toLocal();
   String get result => data['result'] as String;
   String? get score => data['score'] as String?;
+  String get market => data['market'] as String? ?? 'OVER_2_5';
+  String get lineLabel => market == 'OVER_1_5' ? '1.5' : '2.5';
   double get probability => (prediction['probability'] as num).toDouble();
   List<String> get reasons => List<String>.from(prediction['reasons'] as List);
 }

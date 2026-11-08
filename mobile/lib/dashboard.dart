@@ -279,7 +279,7 @@ class _DashboardState extends State<Dashboard> with WidgetsBindingObserver {
               [
                 'Supone independencia entre partidos.',
                 if (_batch?.evidence != null) _batch!.evidence!.summary,
-                'Over 2.5 significa 3 goles o más en 90 minutos más descuento.',
+                'Over ${ticket.lineLabel} significa ${ticket.lineLabel == '1.5' ? 2 : 3} goles o más en 90 minutos más descuento.',
               ].join(' '),
               style: const TextStyle(color: muted, height: 1.5),
             ),
@@ -313,7 +313,7 @@ class _DashboardState extends State<Dashboard> with WidgetsBindingObserver {
                       spacing: 12,
                       runSpacing: 10,
                       children: [
-                        const Label('OVER 2.5', color: lime),
+                        Label('OVER ${pick.lineLabel}', color: lime),
                         Label(percent(pick.probability)),
                         StatusPill(pick.result),
                         if (pick.score != null) Label(pick.score!),
@@ -469,11 +469,11 @@ class _DashboardState extends State<Dashboard> with WidgetsBindingObserver {
           ),
           child: Row(
             children: [
-              const Expanded(
+              Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
+                    const Text(
                       'UN SOLO MERCADO',
                       style: TextStyle(
                         color: lime,
@@ -482,18 +482,18 @@ class _DashboardState extends State<Dashboard> with WidgetsBindingObserver {
                         fontWeight: FontWeight.w700,
                       ),
                     ),
-                    SizedBox(height: 9),
+                    const SizedBox(height: 9),
                     Text(
-                      'Over 2.5',
-                      style: TextStyle(
+                      'Over ${_batch?.lineLabel ?? '1.5'}',
+                      style: const TextStyle(
                         fontSize: 30,
                         fontWeight: FontWeight.w800,
                       ),
                     ),
-                    SizedBox(height: 4),
+                    const SizedBox(height: 4),
                     Text(
-                      '3 goles o más · 90 min + descuento',
-                      style: TextStyle(color: muted, fontSize: 11),
+                      '${_batch?.goalsNeeded ?? 2} goles o más · 90 min + descuento',
+                      style: const TextStyle(color: muted, fontSize: 11),
                     ),
                   ],
                 ),
@@ -540,7 +540,7 @@ class _DashboardState extends State<Dashboard> with WidgetsBindingObserver {
         ),
         if (_batch != null)
           Text(
-            '${_batch!.day} · ${_batch!.tickets.length * 4} partidos únicos',
+            '${_batch!.day} · ${_batch!.tickets.length * _batch!.legs} partidos únicos',
             style: const TextStyle(color: muted, fontSize: 12),
           ),
         const SizedBox(height: 18),
@@ -606,7 +606,7 @@ class _DashboardState extends State<Dashboard> with WidgetsBindingObserver {
             Padding(
               padding: const EdgeInsets.only(top: 18),
               child: Notice(
-                'Faltan ${_batch!.missing} partidos que superen los filtros para completar 4 tickets. No se bajó el umbral.',
+                'Faltan ${_batch!.missing} partidos que superen los filtros para completar 4 tickets de ${_batch!.legs}. No se bajó el umbral.',
                 icon: Icons.filter_alt_outlined,
               ),
             ),
@@ -650,9 +650,9 @@ class _DashboardState extends State<Dashboard> with WidgetsBindingObserver {
           style: TextStyle(fontWeight: FontWeight.w600),
         ),
         const SizedBox(height: 6),
-        const Text(
-          'Se necesitan 4 selecciones más que pasen los filtros.',
-          style: TextStyle(color: muted, height: 1.5),
+        Text(
+          'Se necesitan ${_batch?.legs ?? 6} selecciones más que pasen los filtros.',
+          style: const TextStyle(color: muted, height: 1.5),
         ),
       ],
     ),
@@ -742,20 +742,20 @@ class _DashboardState extends State<Dashboard> with WidgetsBindingObserver {
         'Local y visitante',
         'Compara al local jugando en casa y al visitante jugando fuera. Suaviza las muestras con los promedios de su liga.',
       ),
-      const _Explanation(
+      _Explanation(
         '03',
         'Filtros antes que cantidad',
-        'Exige historial suficiente, actividad reciente y una probabilidad mínima. Cada ticket tiene 4 partidos y ninguna tanda repite un encuentro.',
+        'Exige historial suficiente, actividad reciente y una probabilidad mínima. Cada ticket tiene ${_batch?.legs ?? 6} partidos y ninguna tanda repite un encuentro.',
       ),
-      const _Explanation(
+      _Explanation(
         '04',
         'Resultados confirmados',
-        'Un ticket se marca acertado cuando sus cuatro partidos finalizan con al menos 3 goles. Aplazados y cancelados pasan a revisión.',
+        'Un ticket se marca acertado cuando sus ${_batch?.legs ?? 6} partidos finalizan con al menos ${_batch?.goalsNeeded ?? 2} goles. Aplazados y cancelados pasan a revisión.',
       ),
       Notice(
         _batch?.evidence != null
-            ? '${_batch!.evidence!.summary} No es una garantía futura: cuatro selecciones de ${percent(_batch!.evidence!.hitRate)} acertarían juntas ${oneIn(_batch!.evidence!.fourPicks)} veces.'
-            : 'Un porcentaje histórico no es una garantía futura. Cuatro selecciones de 65% acertarían juntas 1 de cada 6 veces si fueran independientes.',
+            ? '${_batch!.evidence!.summary} No es una garantía futura: ${_batch!.legs} selecciones de ${percent(_batch!.evidence!.hitRate)} acertarían juntas ${oneIn(_batch!.evidence!.ticketPicks(_batch!.legs))} veces.'
+            : 'Un porcentaje histórico no es una garantía futura. Seis selecciones de 85% acertarían juntas 1 de cada 3 veces si fueran independientes.',
         icon: Icons.info_outline,
       ),
       const SizedBox(height: 24),
@@ -843,7 +843,7 @@ class TicketCard extends StatelessWidget {
             ),
             const SizedBox(height: 12),
             Text(
-              'ID ${ticket.id.substring(0, 8)} · 4 selecciones',
+              'ID ${ticket.id.substring(0, 8)} · ${ticket.legs} selecciones',
               style: const TextStyle(
                 color: muted,
                 fontSize: 11,
@@ -901,9 +901,9 @@ class TicketCard extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(width: 8),
-                    const Text(
-                      '+2.5',
-                      style: TextStyle(
+                    Text(
+                      '+${pick.lineLabel}',
+                      style: const TextStyle(
                         color: lime,
                         fontWeight: FontWeight.w700,
                         fontSize: 12,

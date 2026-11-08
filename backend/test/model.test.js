@@ -74,3 +74,30 @@ test('liquidación exige resultados finales, no goles en vivo', () => {
   assert.equal(ticketStatus(['won', 'won', 'won', 'lost']), 'lost');
   assert.equal(ticketStatus(['won', 'won', 'won', 'won']), 'won');
 });
+
+test('over 1.5: Poisson, resultado y tickets de 6 partidos', async () => {
+  const { overLine } = await import('../src/model.js');
+  assert.ok(Math.abs(overLine(2, 1.5) - (1 - Math.exp(-2) * 3)) < 1e-12);
+  assert.equal(overLine(3, 2.5), over25(3));
+  assert.throws(() => overLine(2, 3.5), /no soportada/);
+  assert.deepEqual(resultOf({ status: 'FINISHED', homeGoals: 1, awayGoals: 1 }, 'OVER_1_5'), { result: 'won', score: '1–1' });
+  assert.deepEqual(resultOf({ status: 'FINISHED', homeGoals: 1, awayGoals: 1 }, 'OVER_2_5'), { result: 'lost', score: '1–1' });
+  assert.equal(resultOf({ status: 'FINISHED', homeGoals: 1, awayGoals: 0 }, 'OVER_1_5').result, 'lost');
+  const now = Date.parse('2026-11-05T17:00:00Z'), snapshot = demoSnapshot(now);
+  const f = snapshot.fixtures[0];
+  const p15 = predict(f, snapshot.history, { asOf: now, line: 1.5 }), p25 = predict(f, snapshot.history, { asOf: now });
+  assert.ok(p15.probability > p25.probability);
+  assert.equal(p15.line, 1.5);
+  const batch = generateBatch(snapshot, { now, market: 'OVER_1_5', legs: 6, minProbability: 0.5 });
+  assert.ok(batch.tickets.length >= 1);
+  assert.ok(batch.tickets.every(t => t.selections.length === 6 && t.selections.every(s => s.market === 'OVER_1_5')));
+  assert.deepEqual([batch.market, batch.line, batch.legs], ['OVER_1_5', 1.5, 6]);
+  assert.equal(batch.missingMatches, Math.max(0, 24 - batch.eligibleMatches));
+  assert.throws(() => generateBatch(snapshot, { now, legs: 5 }), /inválido/);
+  // Ligas con bajo acierto medido en over 1.5 no entran.
+  const blocked = { ...snapshot, fixtures: snapshot.fixtures.map(x => ({ ...x, league: { ...x.league, id: 'SA' } })),
+    history: snapshot.history.map(x => ({ ...x, league: { ...x.league, id: 'SA' } })) };
+  const none = generateBatch(blocked, { now, market: 'OVER_1_5', legs: 6, minProbability: 0.5 });
+  assert.equal(none.tickets.length, 0);
+  assert.ok(none.rejections.every(r => /bajo acierto/.test(r.reason)));
+});

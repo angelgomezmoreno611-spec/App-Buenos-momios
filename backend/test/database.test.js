@@ -139,3 +139,22 @@ test('csv_matches exige marcador en partidos terminados y solo admite service_ro
   await db.exec('reset role;');
   assert.equal((await db.query('select count(*)::int n from public.csv_sync_runs')).rows[0].n, 1);
 });
+test('PostgreSQL acepta tickets de 6 partidos over 1.5 y los liquida con su tamaño', async () => {
+  const { generateBatch } = await import('../src/tickets.js');
+  const { demoSnapshot } = await import('../src/demo.js');
+  const now = Date.parse('2026-11-05T17:00:00Z');
+  const batch = generateBatch(demoSnapshot(now), { now, market: 'OVER_1_5', legs: 6, minProbability: 0.5, mode: 'live' });
+  batch.day = '2099-03-01';
+  for (const t of batch.tickets) for (const s of t.selections) s.match = { ...s.match, id: `six-${s.match.id}` };
+  await publish(batch);
+  const ticket = batch.tickets[0];
+  assert.equal((await db.query('select legs from public.tickets where id = $1', [ticket.id])).rows[0].legs, 6);
+  const results = ticket.selections.map(s => ({ matchId: s.match.id, result: 'won', score: '1–1' }));
+  await db.query('select public.apply_results($1::jsonb)', [JSON.stringify(results.slice(0, 5))]);
+  assert.equal((await db.query('select status from public.tickets where id = $1', [ticket.id])).rows[0].status, 'pending');
+  await db.query('select public.apply_results($1::jsonb)', [JSON.stringify(results)]);
+  assert.equal((await db.query('select status from public.tickets where id = $1', [ticket.id])).rows[0].status, 'won');
+  const bad = structuredClone(batch); bad.id = randomUUID(); bad.day = '2099-03-02';
+  bad.tickets = [{ ...bad.tickets[0], id: randomUUID(), selections: bad.tickets[0].selections.slice(0, 5).map(s => ({ ...s, match: { ...s.match, id: `x-${s.match.id}` } })) }];
+  await assert.rejects(publish(bad), /cuatro o seis/);
+});

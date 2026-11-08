@@ -59,7 +59,7 @@ export class SupabaseRepository {
     return this.request(`devices?user_id=eq.${userId}&token=eq.${encodeURIComponent(token)}`, { method: 'DELETE' });
   }
   async pendingMatches(now = Date.now()) {
-    return this.request(`selections?result=in.(pending,review)&kickoff=lte.${encodeURIComponent(new Date(now).toISOString())}&select=match_id&order=kickoff.asc&limit=1000`);
+    return this.request(`selections?result=in.(pending,review)&kickoff=lte.${encodeURIComponent(new Date(now).toISOString())}&select=match_id,market&order=kickoff.asc&limit=1000`);
   }
   async applyResults(results) { return this.rpc('apply_results', { p_results: results }); }
   async storedSeasons() {
