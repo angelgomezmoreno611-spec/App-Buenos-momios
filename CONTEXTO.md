@@ -545,3 +545,20 @@ No se dejaron servidores activos ni se desplegó el proyecto.
 - 2026-11-08: comprobado que la migración 006 está aplicada (`tickets.kind`
   accesible). APK recompilado con Brave cerrado (24 s) e instalado en el Poco F7
   con soporte del ticket arriesgado.
+- 2026-11-08: descubrimiento de partidos con API-Football gratis. Comprobado:
+  `fixtures?date=` funciona solo de ayer a mañana (1242 partidos hoy, 330 ligas);
+  `last`, temporadas actuales y fechas viejas bloqueados; `predictions?fixture=`
+  SÍ funciona (promedios casa/fuera de la temporada + últimos 5). Límites: 10/min,
+  100/día. Método "forma reciente" (70% temporada casa/fuera + 30% últimos 5,
+  Poisson) medido en 25 660 partidos de 30 ligas (`bt-form.mjs`): over 1.5 ≥0.80
+  82.0%, ≥0.85 2135 sel./84.7%; over 2.5 ≥0.65 63.2%; over 3.5 ≥0.45 43.0%.
+  Umbrales para ligas nuevas (no validadas): 0.85 / 0.65 / 0.45.
+  Implementado: `src/apifootball.js`, `src/discover.js` (job sin lock, ≤6
+  consultas por ejecución con 6.5 s entre ellas, presupuesto 85/día en
+  `af_usage`, listas una vez por día, prioriza ligas por `af_league_rates`),
+  migración 007 (`af_matches`, `af_usage`, vista `af_league_rates`), generate y
+  settle integrados, excluye las 26 ligas ya cubiertas (ids verificados con
+  /leagues?current=true), copas, amistosos, juveniles y eliminatorias.
+  API_FOOTBALL_KEY añadida a Vercel (sensible). 65/65 pruebas. Consultas AF
+  gastadas hoy en pruebas: ~22. PENDIENTE usuario: migración 007 y cron
+  `momios-discover`.

@@ -27,6 +27,17 @@ select cron.schedule('momios-csv', '27 12 * * 2,5', $$
     body := '{}'::jsonb, timeout_milliseconds := 60000
   );
 $$);
+-- Descubrimiento con API-Football (plan gratuito, 100 consultas/día, 10/min):
+-- cada 5 min de 05:00 a 06:55 UTC (22:00-23:55 Mazatlán), antes de generate.
+-- No usa el lock compartido; cada ejecución hace ≤6 consultas en <45 s.
+select cron.schedule('momios-discover', '*/5 5-6 * * *', $$
+  select net.http_post(
+    url := (select decrypted_secret from vault.decrypted_secrets where name = 'buenos_momios_api_url') || '/api/jobs/discover',
+    headers := jsonb_build_object('Content-Type','application/json','Authorization',
+      'Bearer ' || (select decrypted_secret from vault.decrypted_secrets where name = 'buenos_momios_cron_secret')),
+    body := '{}'::jsonb, timeout_milliseconds := 60000
+  );
+$$);
 select cron.schedule('momios-generate', '1 7 * * *', $$
   select net.http_post(
     url := (select decrypted_secret from vault.decrypted_secrets where name = 'buenos_momios_api_url') || '/api/jobs/generate',

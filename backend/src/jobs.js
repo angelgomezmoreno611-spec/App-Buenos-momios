@@ -14,7 +14,7 @@ export function previousSeason(now = Date.now(), league = '') {
   return (d.getUTCMonth() >= 6 ? year : year - 1) - 1;
 }
 
-export async function runJob(kind, { repo, provider, push, timeZone, minProbability, csvLeagues, csvSync, market, legs, evidence, openLiga, risky, now = Date.now() }) {
+export async function runJob(kind, { repo, provider, push, timeZone, minProbability, csvLeagues, csvSync, market, legs, evidence, openLiga, risky, afEnabled, now = Date.now() }) {
   const owner = await repo.acquireLock();
   if (!owner) return { skipped: true, reason: 'Hay otra tarea ejecutándose o se está respetando el límite del proveedor' };
   const deadline = Date.now() + 45_000;
@@ -44,6 +44,11 @@ export async function runJob(kind, { repo, provider, push, timeZone, minProbabil
             'Ligas de football-data.co.uk: datos actualizados dos veces por semana; sus resultados se liquidan con días de retraso.',
             ...(measured.length ? [`Acierto medido por partido en 2022-2026 con umbral ${minProbability} (selecciones): ${measured.join(', ')}.`] : [])];
         }
+      }
+      // API-Football: partidos ya analizados por el job discover (sin consultas aquí).
+      if (afEnabled) {
+        const af = await repo.afUpcoming(now, now + 72 * 3_600_000, { analyzed: true }).catch(() => null);
+        if (af) snapshot.fixtures = [...snapshot.fixtures, ...af.filter(m => m.formFeatures)];
       }
       // OpenLigaDB (3. Liga): consulta directa, gratis; si falla, se sigue sin ella.
       if (openLiga?.leagues?.length) {
@@ -79,6 +84,12 @@ export async function runJob(kind, { repo, provider, push, timeZone, minProbabil
       const marketOf = new Map(pending.map(x => [x.match_id, x.market ?? 'OVER_2_5']));
       const ids = all.filter(id => id.startsWith('fd-')), csvIds = all.filter(id => id.startsWith('fdu-'));
       const results = [];
+      // API-Football: el resultado llega con la lista de "ayer" del job discover.
+      const afIds = all.filter(id => id.startsWith('af-'));
+      for (let i = 0; i < afIds.length; i += 100) {
+        const matches = await repo.afResults(afIds.slice(i, i + 100)).catch(() => []);
+        results.push(...matches.map(m => ({ matchId: m.id, ...resultOf(m, marketOf.get(m.id)) })));
+      }
       // OpenLigaDB: una consulta pequeña por partido pendiente (máx. 10 por ejecución).
       const oldbIds = all.filter(id => id.startsWith('oldb-'));
       if (oldbIds.length && openLiga?.get) {

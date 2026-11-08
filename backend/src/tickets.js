@@ -1,5 +1,12 @@
 import { randomUUID } from 'node:crypto';
 import { predict, MODEL_VERSION, MODEL_EVIDENCE } from './model.js';
+import { formPredict, FORM_MIN, FORM_EVIDENCE } from './apifootball.js';
+
+// Partidos de API-Football (traen `formFeatures`) usan el modelo de forma reciente
+// y un umbral más exigente; el resto, el modelo principal con historial.
+const isForm = f => 'formFeatures' in f;
+const predictFixture = (f, history, opts) => isForm(f) ? formPredict(f, f.formFeatures, opts) : predict(f, history, opts);
+const minFor = (f, market, base) => isForm(f) ? Math.max(base, FORM_MIN[market]) : base;
 
 export function dayKey(now = Date.now(), timeZone = 'America/Mazatlan') {
   const parts = new Intl.DateTimeFormat('en-CA', { timeZone, year: 'numeric', month: '2-digit', day: '2-digit' }).formatToParts(now);
@@ -20,12 +27,16 @@ export function riskyTicket(fixtures, history, { now, usedIds, number }) {
   for (const market of ['OVER_3_5', 'OVER_2_5']) {
     const { picks, min } = RISKY[market], line = MARKETS[market].line;
     const ranked = fixtures.filter(f => !used.has(f.id) && !MARKET_BLOCKED[market].includes(f.league.id))
-      .map(f => ({ match: f, prediction: predict(f, history, { asOf: now, line }) }))
-      .filter(x => x.prediction.eligible && x.prediction.probability >= min)
+      .map(f => ({ match: f, prediction: predictFixture(f, history, { asOf: now, line }) }))
+      .filter(x => x.prediction.eligible && x.prediction.probability >= minFor(x.match, market, min))
       .sort((a, b) => b.prediction.probability - a.prediction.probability || a.match.id.localeCompare(b.match.id))
       .slice(0, picks);
     if (ranked.length < picks) return null;
-    for (const x of ranked) { used.add(x.match.id); selections.push({ ...x, market, result: 'pending', score: null }); }
+    for (const x of ranked) {
+      used.add(x.match.id);
+      const { formFeatures, analyzed, ...match } = x.match;
+      selections.push({ match, prediction: x.prediction, market, result: 'pending', score: null });
+    }
   }
   return { id: randomUUID(), number, kind: 'risky', name: RISKY.name, status: 'pending', selections,
     probability: selections.reduce((p, x) => p * x.prediction.probability, 1) };
@@ -48,12 +59,13 @@ export function generateBatch(snapshot, { now = Date.now(), timeZone, minProbabi
       rejections.push({ matchId: f.id, reason: 'Liga con bajo acierto medido en este mercado' });
       continue;
     }
-    const prediction = predict(f, snapshot.history, { asOf: now, line });
-    if (!prediction.eligible || prediction.probability < minProbability) {
+    const prediction = predictFixture(f, snapshot.history, { asOf: now, line });
+    if (!prediction.eligible || prediction.probability < minFor(f, market, minProbability)) {
       rejections.push({ matchId: f.id, reason: prediction.reason ?? 'Probabilidad inferior al umbral' });
       continue;
     }
-    candidates.push({ match: f, prediction, market, result: 'pending', score: null });
+    const { formFeatures, analyzed, ...match } = f; // no se publican datos internos
+    candidates.push({ match, prediction, market, result: 'pending', score: null });
   }
   candidates.sort((a, b) => b.prediction.probability - a.prediction.probability || a.match.id.localeCompare(b.match.id));
   const count = Math.min(4, Math.floor(candidates.length / legs));
@@ -84,6 +96,7 @@ export function generateBatch(snapshot, { now = Date.now(), timeZone, minProbabi
       'Probabilidades estimadas solo con marcadores históricos; sin garantía de ganancias.',
       'Probabilidad del ticket calculada suponiendo independencia; pueden existir correlaciones.',
       'Sin cuotas actuales: no se calcula valor esperado ni rentabilidad.',
+      ...([...tickets, ...(extra ? [extra] : [])].some(t => t.selections.some(x => x.prediction.modelVersion === 'form-af-v1')) ? [FORM_EVIDENCE] : []),
       ...(extra ? [`${RISKY.name}: 2 over 3.5 y 2 over 2.5, probabilidad conjunta estimada ${Math.round(extra.probability * 100)}%. Alto riesgo.`] : [])
     ]
   };

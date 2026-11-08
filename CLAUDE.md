@@ -87,6 +87,13 @@ rechaza, la tanda se publica sin él.
   incluye la atribución). Solo en over 1.5 (validada); `OPENLIGADB_COMPETITIONS`
   (`none` desactiva). generate descarga 2 temporadas; settle consulta cada partido
   pendiente (IDs `oldb-`, máx. 10 por ejecución). Fallos no detienen la tanda.
+- `src/apifootball.js` + `src/discover.js`: descubrimiento con API-Football gratis
+  (solo ayer/hoy/mañana, 100 consultas/día, 10/min). Job `discover` (sin lock, cada
+  5 min de 05:00 a 06:55 UTC): listas del día → `af_matches` (migración 007), luego
+  "predictions" de partidos de ligas NO cubiertas (prioriza ligas goleadoras por
+  `af_league_rates`). generate usa `formPredict` (temporada casa/fuera + últimos 5)
+  con umbral `FORM_MIN` (over 1.5 ≥0.85); settle lee el resultado de la lista de
+  "ayer". IDs `af-`. `AF_DISCOVERY=false` lo apaga. Uso diario en `af_usage`.
 - `src/football/`: módulo independiente de información de partidos con ocho
   adaptadores (`providers.js`), normalizador común, transporte HTTP secuencial con
   límite de 2 MB por respuesta (`http.js`, compartido con `FootballData` para

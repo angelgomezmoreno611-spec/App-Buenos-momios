@@ -180,3 +180,17 @@ test('PostgreSQL acepta un quinto ticket arriesgado con mercados mixtos', async 
   twice.tickets = [risky, { ...risky, id: randomUUID() }].map(t => ({ ...t, selections: t.selections.map(s => ({ ...s, match: { ...s.match, id: `${s.match.id}-${randomUUID()}` } })) }));
   await assert.rejects(publish(twice), /Lote inválido/);
 });
+test('af_matches valida ids y marcador; af_league_rates resume over 1.5 por liga', async () => {
+  await db.exec(`insert into public.af_matches(id, league_id, league_name, kickoff, home_id, home_name, away_id, away_name, status, home_goals, away_goals) values
+    ('af-1', 9, 'L', now() - interval '2 days', 'a', 'A', 'b', 'B', 'FINISHED', 1, 1),
+    ('af-2', 9, 'L', now() - interval '3 days', 'a', 'A', 'c', 'C', 'FINISHED', 1, 0),
+    ('af-3', 9, 'L', now() + interval '1 day', 'a', 'A', 'd', 'D', 'TIMED', null, null)`);
+  await assert.rejects(db.exec(`insert into public.af_matches(id, league_id, league_name, kickoff, home_id, home_name, away_id, away_name, status)
+    values ('af-4', 9, 'L', now(), 'a', 'A', 'b', 'B', 'FINISHED')`), /check/);
+  await assert.rejects(db.exec(`insert into public.af_matches(id, league_id, league_name, kickoff, home_id, home_name, away_id, away_name, status)
+    values ('fd-4', 9, 'L', now(), 'a', 'A', 'b', 'B', 'TIMED')`), /check/);
+  const rate = (await db.query('select matches, over15 from public.af_league_rates where league_id = 9')).rows[0];
+  assert.deepEqual(rate, { matches: 2, over15: 0.5 });
+  await assert.rejects(db.exec('set role anon; select * from public.af_matches;'), /permission denied/);
+  await db.exec('reset role;');
+});

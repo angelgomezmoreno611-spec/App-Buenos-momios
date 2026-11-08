@@ -137,6 +137,57 @@ export class SupabaseRepository {
     const rows = await this.request(`csv_matches?id=in.(${encodeURIComponent(list)})&status=eq.FINISHED&select=id,status,home_goals,away_goals`);
     return rows.map(r => ({ id: r.id, status: r.status, homeGoals: r.home_goals, awayGoals: r.away_goals }));
   }
+  // API-Football (plan gratuito): consultas gastadas por día y listas ya bajadas.
+  async afUsage(day) {
+    const rows = await this.request(`af_usage?day=eq.${day}&select=calls,lists_done`);
+    return rows[0] ? { calls: rows[0].calls, lists: rows[0].lists_done } : { calls: 0, lists: [] };
+  }
+  async setAfUsage(day, calls, lists) {
+    await this.request('af_usage?on_conflict=day', { method: 'POST', body: [{ day, calls, lists_done: lists }],
+      headers: { Prefer: 'resolution=merge-duplicates,return=minimal' } });
+  }
+  // Upsert sin tocar features/analyzed_at (no van en el cuerpo).
+  async storeAfMatches(matches, before) {
+    const rows = matches.map(m => ({
+      id: m.id, league_id: m.league.afId, league_name: m.league.name, round: m.league.round ?? '', kickoff: m.kickoff,
+      home_id: m.home.id, home_name: m.home.name, away_id: m.away.id, away_name: m.away.name,
+      status: m.status, home_goals: m.homeGoals, away_goals: m.awayGoals, synced_at: new Date().toISOString()
+    }));
+    const upsert = { Prefer: 'resolution=merge-duplicates,return=minimal' };
+    for (let i = 0; i < rows.length; i += 500) {
+      await this.request('af_matches?on_conflict=id', { method: 'POST', body: rows.slice(i, i + 500), headers: upsert });
+    }
+    if (before) await this.request(`af_matches?kickoff=lt.${encodeURIComponent(new Date(before).toISOString())}`, { method: 'DELETE' });
+  }
+  async saveAfFeatures(id, features) {
+    await this.request(`af_matches?id=eq.${encodeURIComponent(id)}`, { method: 'PATCH',
+      body: { features, analyzed_at: new Date().toISOString() }, headers: { Prefer: 'return=minimal' } });
+  }
+  #afRow(r) {
+    return {
+      id: r.id, league: { id: `af-${r.league_id}`, name: r.league_name, afId: r.league_id, round: r.round },
+      home: { id: r.home_id, name: r.home_name }, away: { id: r.away_id, name: r.away_name },
+      kickoff: new Date(r.kickoff).toISOString(), status: r.status, homeGoals: r.home_goals, awayGoals: r.away_goals,
+      formFeatures: r.features ?? null, analyzed: Boolean(r.analyzed_at)
+    };
+  }
+  // Partidos por jugar entre dos fechas (con o sin análisis).
+  async afUpcoming(from, until, { analyzed } = {}) {
+    const filter = `status=eq.TIMED&kickoff=gt.${encodeURIComponent(new Date(from).toISOString())}&kickoff=lte.${encodeURIComponent(new Date(until).toISOString())}` +
+      (analyzed === true ? '&analyzed_at=not.is.null' : analyzed === false ? '&analyzed_at=is.null' : '');
+    const rows = await this.request(`af_matches?${filter}&select=*&order=kickoff.asc&limit=1000`);
+    return rows.map(r => this.#afRow(r));
+  }
+  async afLeagueRates() {
+    const rows = await this.request('af_league_rates?select=league_id,matches,over15&limit=5000');
+    return new Map(rows.map(r => [r.league_id, { matches: r.matches, over15: r.over15 }]));
+  }
+  async afResults(ids) {
+    if (!ids.length) return [];
+    const list = ids.map(id => `"${id.replace(/["\\]/g, '')}"`).join(',');
+    const rows = await this.request(`af_matches?id=in.(${encodeURIComponent(list)})&status=in.(FINISHED,UNKNOWN)&select=*`);
+    return rows.map(r => this.#afRow(r));
+  }
   async acquireLock() { return this.rpc('acquire_job_lock', {}); }
   async releaseLock(owner) { return this.rpc('release_job_lock', { p_owner: owner }); }
   async claimNotifications() { return this.rpc('claim_notifications', {}); }

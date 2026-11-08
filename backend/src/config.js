@@ -44,7 +44,9 @@ export function configuredApp(env = process.env) {
   };
   return createApp({ ...common, csvLeagues, openLiga, market, legs, minProbability,
     // Ticket "El arriesgado del día" (2 over 3.5 + 2 over 2.5): TICKET_RISKY=false lo apaga.
-    risky: env.TICKET_RISKY?.trim() !== 'false', evidence: EVIDENCE[market] ?? null,
+    risky: env.TICKET_RISKY?.trim() !== 'false',
+    // Descubrimiento de partidos con API-Football (plan gratuito); AF_DISCOVERY=false lo apaga.
+    apiFootball: env.API_FOOTBALL_KEY?.trim() && env.AF_DISCOVERY?.trim() !== 'false' ? { key: env.API_FOOTBALL_KEY.trim() } : null, evidence: EVIDENCE[market] ?? null,
     repo: new SupabaseRepository({ url: env.SUPABASE_URL,
       secretKey: env.SUPABASE_SECRET_KEY, publishableKey: env.SUPABASE_PUBLISHABLE_KEY,
       serviceKey: env.SUPABASE_SERVICE_ROLE_KEY, anonKey: env.SUPABASE_ANON_KEY }),

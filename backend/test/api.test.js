@@ -297,3 +297,12 @@ test('si la base rechaza el ticket arriesgado, la tanda se publica sin él', asy
   assert.deepEqual(attempts, [['risky'], []]);
   assert.equal(result.risky, false);
 });
+test('settle liquida partidos de API-Football con lo guardado por discover', async () => {
+  const applied = [];
+  const repo = { acquireLock: async () => 'lease', releaseLock: async () => {},
+    pendingMatches: async () => [{ match_id: 'af-1', market: 'OVER_1_5' }, { match_id: 'af-2', market: 'OVER_1_5' }],
+    afResults: async ids => [{ id: 'af-1', status: 'FINISHED', homeGoals: 1, awayGoals: 0 }, { id: 'af-2', status: 'UNKNOWN', homeGoals: null, awayGoals: null }].filter(m => ids.includes(m.id)),
+    applyResults: async r => applied.push(...r) };
+  await runJob('settle', { repo, provider: {}, now: Date.now() });
+  assert.deepEqual(applied.map(r => [r.matchId, r.result]), [['af-1', 'lost'], ['af-2', 'review']]);
+});
