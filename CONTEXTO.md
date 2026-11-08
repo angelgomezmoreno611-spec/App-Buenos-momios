@@ -430,3 +430,19 @@ No se dejaron servidores activos ni se desplegó el proyecto.
   en el plan gratuito de football-data.org); B) CSV de football-data.co.uk para
   validar Brasil/México; C) Wikipedia para Honduras/Costa Rica; D) carga manual;
   E) scraping descartado por términos de uso.
+- 2026-11-08: añadido Brasileirão (BSA) a football-data.org: hasta 9 ligas,
+  temporada de año natural en `previousSeason(now, league)`, liga vacía = aviso.
+  FOOTBALL_COMPETITIONS actualizado en Vercel y `.env`; history cargó BSA 2025
+  (380). 45/45 pruebas. Libertadores NO añadida: el modelo filtra historial por
+  competición y en una copa ningún equipo llega a 6 partidos por condición.
+  Fuentes revisadas sin API de pago: football-data.co.uk (CSV gratis: MEX, ARG,
+  USA, BRA... con resultados de todas las temporadas, con días de retraso, y
+  `new_league_fixtures.csv` con próximos partidos, horas en Europe/London);
+  Wikipedia ES tiene calendario y resultados de Honduras (Apertura 2026, tablas
+  por jornada con rowspan); Costa Rica no tiene página de la temporada actual.
+  Backtest (scratchpad, mismo modelo, umbral 0.65): Liga MX 68 picks en 14 años,
+  57% acierto, Brier peor que la referencia → no apta; Argentina 2 picks (liga de
+  pocos goles); Brasil 8 picks, 50% → BSA aportará muy pocos; MLS 592 picks, 67%
+  (2024: 66%, 2025: 74%, 2026: 70%) → apta, pero ahora está en playoffs (posible
+  prórroga) y vuelve en febrero. Módulo `src/csvleagues.js` creado y probado,
+  AÚN NO conectado a config/jobs. Pendiente decisión del usuario.
