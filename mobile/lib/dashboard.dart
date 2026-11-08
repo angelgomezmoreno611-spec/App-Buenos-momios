@@ -235,7 +235,7 @@ class _DashboardState extends State<Dashboard> with WidgetsBindingObserver {
               children: [
                 Expanded(
                   child: Text(
-                    'Ticket 0${ticket.number}',
+                    ticket.title,
                     style: const TextStyle(
                       fontSize: 28,
                       fontWeight: FontWeight.w800,
@@ -279,7 +279,9 @@ class _DashboardState extends State<Dashboard> with WidgetsBindingObserver {
               [
                 'Supone independencia entre partidos.',
                 if (_batch?.evidence != null) _batch!.evidence!.summary,
-                'Over ${ticket.lineLabel} significa ${ticket.lineLabel == '1.5' ? 2 : 3} goles o más en 90 minutos más descuento.',
+                ticket.isRisky
+                    ? 'Ticket de alto riesgo: 2 over 3.5 (4 goles o más) y 2 over 2.5 (3 goles o más) en 90 minutos más descuento.'
+                    : 'Over ${ticket.lineLabel} significa ${ticket.picks.isEmpty ? 2 : ticket.picks.first.goalsNeeded} goles o más en 90 minutos más descuento.',
               ].join(' '),
               style: const TextStyle(color: muted, height: 1.5),
             ),
@@ -502,7 +504,7 @@ class _DashboardState extends State<Dashboard> with WidgetsBindingObserver {
               Column(
                 children: [
                   Text(
-                    '${_batch?.tickets.length ?? 0}/4',
+                    '${_batch?.regularTickets.length ?? 0}/4',
                     style: const TextStyle(
                       color: lime,
                       fontSize: 32,
@@ -540,7 +542,7 @@ class _DashboardState extends State<Dashboard> with WidgetsBindingObserver {
         ),
         if (_batch != null)
           Text(
-            '${_batch!.day} · ${_batch!.tickets.length * _batch!.legs} partidos únicos',
+            '${_batch!.day} · ${_batch!.regularTickets.length * _batch!.legs + (_batch!.riskyTicket == null ? 0 : 4)} partidos únicos',
             style: const TextStyle(color: muted, fontSize: 12),
           ),
         const SizedBox(height: 18),
@@ -588,7 +590,7 @@ class _DashboardState extends State<Dashboard> with WidgetsBindingObserver {
                 spacing: 18,
                 runSpacing: 18,
                 children: [
-                  for (final ticket in _batch!.tickets)
+                  for (final ticket in _batch!.regularTickets)
                     SizedBox(
                       width: width,
                       child: TicketCard(
@@ -596,8 +598,17 @@ class _DashboardState extends State<Dashboard> with WidgetsBindingObserver {
                         onTap: () => _showTicket(ticket),
                       ),
                     ),
-                  for (var i = _batch!.tickets.length; i < 4; i++)
+                  for (var i = _batch!.regularTickets.length; i < 4; i++)
                     SizedBox(width: width, child: _emptyTicket(i + 1)),
+                  // El arriesgado va aparte, al final, para no confundirlo.
+                  if (_batch!.riskyTicket != null)
+                    SizedBox(
+                      width: width,
+                      child: TicketCard(
+                        ticket: _batch!.riskyTicket!,
+                        onTap: () => _showTicket(_batch!.riskyTicket!),
+                      ),
+                    ),
                 ],
               );
             },
@@ -809,7 +820,9 @@ class TicketCard extends StatelessWidget {
         padding: const EdgeInsets.all(21),
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(22),
-          border: Border.all(color: border),
+          border: Border.all(
+            color: ticket.isRisky ? Colors.orangeAccent : border,
+          ),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -819,19 +832,22 @@ class TicketCard extends StatelessWidget {
                 Container(
                   padding: const EdgeInsets.all(9),
                   decoration: BoxDecoration(
-                    color: lime.withValues(alpha: 0.1),
+                    color: (ticket.isRisky ? Colors.orangeAccent : lime)
+                        .withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(10),
                   ),
-                  child: const Icon(
-                    Icons.confirmation_number_outlined,
-                    color: lime,
+                  child: Icon(
+                    ticket.isRisky
+                        ? Icons.local_fire_department_outlined
+                        : Icons.confirmation_number_outlined,
+                    color: ticket.isRisky ? Colors.orangeAccent : lime,
                     size: 21,
                   ),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
                   child: Text(
-                    'Ticket 0${ticket.number}',
+                    ticket.title,
                     style: const TextStyle(
                       fontSize: 20,
                       fontWeight: FontWeight.w800,

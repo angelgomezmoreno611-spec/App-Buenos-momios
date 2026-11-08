@@ -126,7 +126,7 @@ export function resultFiles(code, now) {
 
 // Ligas activadas por defecto según el mercado: las que superaron el backtest
 // temporal (2022-07 a 2026-11, mismo modelo). Over 2.5: umbral 0.65, al menos
-// 40 selecciones y acierto ≥ ~64%. Over 1.5: umbral 0.80, al menos 100
+// 40 selecciones y acierto ≥ ~64%. Over 1.5: umbral 0.80, al menos 40
 // selecciones y acierto ≥ 80%. Al elegir las mejores de 22-25 ligas hay sesgo de
 // selección: el acierto real probablemente será algo menor que el medido.
 export const CSV_VALIDATION = {
@@ -143,7 +143,9 @@ export const CSV_VALIDATION = {
     MEX: { picks: 314, hitRate: 0.825 }, SWE: { picks: 256, hitRate: 0.816 },
     DNK: { picks: 248, hitRate: 0.831 }, SC0: { picks: 236, hitRate: 0.809 },
     FIN: { picks: 206, hitRate: 0.801 }, SC2: { picks: 171, hitRate: 0.813 },
-    SC3: { picks: 141, hitRate: 0.837 }, POL: { picks: 131, hitRate: 0.847 }
+    SC3: { picks: 141, hitRate: 0.837 }, POL: { picks: 131, hitRate: 0.847 },
+    // Mismo acierto mínimo pero con menos selecciones medidas (40-99).
+    G1: { picks: 77, hitRate: 0.896 }, IRL: { picks: 43, hitRate: 0.837 }
   }
 };
 export const defaultCsvLeagues = market => Object.keys(CSV_VALIDATION[market] ?? {});

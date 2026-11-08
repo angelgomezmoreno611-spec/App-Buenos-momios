@@ -51,4 +51,41 @@ void main() {
     final e = Evidence({'hitRate': 0.85});
     expect(oneIn(e.ticketPicks(6)), '1 de cada 3');
   });
+
+  test('el ticket arriesgado se separa y muestra mercados mixtos', () {
+    Map<String, dynamic> pick(String m) => {'market': m};
+    final batch = Batch({
+      'warnings': <String>[],
+      'line': 1.5,
+      'legs': 6,
+      'tickets': [
+        {
+          'id': 'a',
+          'number': 1,
+          'status': 'pending',
+          'probability': 0.4,
+          'selections': List.generate(6, (_) => pick('OVER_1_5')),
+        },
+        {
+          'id': 'b',
+          'number': 2,
+          'kind': 'risky',
+          'name': 'El arriesgado del día',
+          'status': 'pending',
+          'probability': 0.08,
+          'selections': [
+            pick('OVER_3_5'),
+            pick('OVER_3_5'),
+            pick('OVER_2_5'),
+            pick('OVER_2_5'),
+          ],
+        },
+      ],
+    });
+    expect(batch.regularTickets.length, 1);
+    final risky = batch.riskyTicket!;
+    expect([risky.title, risky.lineLabel, risky.legs], ['El arriesgado del día', 'mixto', 4]);
+    expect(risky.picks.map((p) => p.goalsNeeded).toList(), [4, 4, 3, 3]);
+    expect(batch.regularTickets.first.title, 'Ticket 01');
+  });
 }

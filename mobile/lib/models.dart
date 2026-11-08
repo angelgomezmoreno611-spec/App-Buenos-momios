@@ -20,6 +20,13 @@ class Batch {
   List<Ticket> get tickets => (data['tickets'] as List)
       .map((t) => Ticket(Map<String, dynamic>.from(t as Map)))
       .toList();
+  List<Ticket> get regularTickets => tickets.where((t) => !t.isRisky).toList();
+  Ticket? get riskyTicket {
+    for (final t in tickets) {
+      if (t.isRisky) return t;
+    }
+    return null;
+  }
 }
 
 /// Acierto medido del modelo en una temporada que no usó para ajustarse.
@@ -57,7 +64,16 @@ class Ticket {
       .map((p) => Pick(Map<String, dynamic>.from(p as Map)))
       .toList();
   int get legs => (data['selections'] as List).length;
-  String get lineLabel => picks.isEmpty ? '2.5' : picks.first.lineLabel;
+  bool get isRisky => data['kind'] == 'risky';
+  String get title => isRisky
+      ? (data['name'] as String? ?? 'El arriesgado del día')
+      : 'Ticket 0$number';
+  // Un solo mercado ("1.5") o "mixto" en el ticket arriesgado.
+  String get lineLabel {
+    final lines = picks.map((p) => p.lineLabel).toSet();
+    if (lines.isEmpty) return '2.5';
+    return lines.length == 1 ? lines.first : 'mixto';
+  }
 }
 
 class Pick {
@@ -72,7 +88,16 @@ class Pick {
   String get result => data['result'] as String;
   String? get score => data['score'] as String?;
   String get market => data['market'] as String? ?? 'OVER_2_5';
-  String get lineLabel => market == 'OVER_1_5' ? '1.5' : '2.5';
+  String get lineLabel => switch (market) {
+        'OVER_1_5' => '1.5',
+        'OVER_3_5' => '3.5',
+        _ => '2.5',
+      };
+  int get goalsNeeded => switch (market) {
+        'OVER_1_5' => 2,
+        'OVER_3_5' => 4,
+        _ => 3,
+      };
   double get probability => (prediction['probability'] as num).toDouble();
   List<String> get reasons => List<String>.from(prediction['reasons'] as List);
 }

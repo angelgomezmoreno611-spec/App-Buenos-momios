@@ -158,3 +158,25 @@ test('PostgreSQL acepta tickets de 6 partidos over 1.5 y los liquida con su tama
   bad.tickets = [{ ...bad.tickets[0], id: randomUUID(), selections: bad.tickets[0].selections.slice(0, 5).map(s => ({ ...s, match: { ...s.match, id: `x-${s.match.id}` } })) }];
   await assert.rejects(publish(bad), /cuatro o seis/);
 });
+test('PostgreSQL acepta un quinto ticket arriesgado con mercados mixtos', async () => {
+  const { generateBatch, riskyTicket } = await import('../src/tickets.js');
+  const { demoSnapshot } = await import('../src/demo.js');
+  const now = Date.parse('2026-11-05T17:00:00Z'), snapshot = demoSnapshot(now);
+  const batch = generateBatch(snapshot, { now, market: 'OVER_1_5', legs: 6, minProbability: 0.5, mode: 'live' });
+  batch.id = randomUUID(); batch.day = '2099-04-01';
+  // Ticket arriesgado forzado con umbrales bajos para la prueba de base de datos.
+  const pool = snapshot.fixtures.slice(0, 4).map((f, i) => ({ ...f, id: `rk-${i}-${f.id}` }));
+  const risky = { id: randomUUID(), number: batch.tickets.length + 1, kind: 'risky', name: 'El arriesgado del día', status: 'pending', probability: 0.05,
+    selections: pool.map((f, i) => ({ match: f, market: i < 2 ? 'OVER_3_5' : 'OVER_2_5', prediction: {}, result: 'pending', score: null })) };
+  assert.equal(pool.length, 4); assert.equal(typeof riskyTicket, 'function');
+  batch.tickets = [...batch.tickets, risky];
+  for (const t of batch.tickets) for (const s of t.selections) s.match = { ...s.match, id: `risky-${s.match.id}` };
+  await publish(batch);
+  const row = (await db.query('select kind, legs, ordinal from public.tickets where id = $1', [risky.id])).rows[0];
+  assert.deepEqual(row, { kind: 'risky', legs: 4, ordinal: batch.tickets.length });
+  const markets = (await db.query('select market from public.selections where ticket_id = $1 order by market', [risky.id])).rows.map(r => r.market);
+  assert.deepEqual(markets, ['OVER_2_5', 'OVER_2_5', 'OVER_3_5', 'OVER_3_5']);
+  const twice = structuredClone(batch); twice.id = randomUUID(); twice.day = '2099-04-02';
+  twice.tickets = [risky, { ...risky, id: randomUUID() }].map(t => ({ ...t, selections: t.selections.map(s => ({ ...s, match: { ...s.match, id: `${s.match.id}-${randomUUID()}` } })) }));
+  await assert.rejects(publish(twice), /Lote inválido/);
+});

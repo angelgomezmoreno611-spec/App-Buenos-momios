@@ -56,6 +56,10 @@ over 2.5 con 4 partidos (umbral 0.65) sigue disponible con `TICKET_MARKET=OVER_2
 y `TICKET_LEGS=4`. La API publica hasta cuatro tickets por día (sin repetir
 partidos), liquida resultados según el mercado de cada selección y prepara avisos.
 En over 1.5 se excluyen LaLiga y Serie A (`MARKET_BLOCKED`, acierto medido bajo).
+Además, un quinto ticket opcional "El arriesgado del día" (`riskyTicket`, `kind:
+'risky'`): 2 over 3.5 (≥0.40) + 2 over 2.5 (≥0.65) con partidos que no usan los
+normales; `TICKET_RISKY=false` lo apaga. Requiere migración 006; si la base lo
+rechaza, la tanda se publica sin él.
 
 **Backend** (`backend/`, Node ESM sin framework, sin dependencias de runtime):
 - `src/config.js` → `configuredApp(env)` es el único punto de cableado: según

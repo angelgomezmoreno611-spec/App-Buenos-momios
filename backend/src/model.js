@@ -26,8 +26,8 @@ export function calibrate(p, calibration = CALIBRATION) {
   return clamp(1 / (1 + Math.exp(-(calibration.a + calibration.b * x))), 0.05, 0.92);
 }
 
-// Líneas de goles soportadas: over 1.5 = 2+ goles; over 2.5 = 3+ goles.
-export const LINES = Object.freeze({ 1.5: 2, 2.5: 3 });
+// Líneas de goles soportadas: over 1.5 = 2+ goles; over 2.5 = 3+; over 3.5 = 4+.
+export const LINES = Object.freeze({ 1.5: 2, 2.5: 3, 3.5: 4 });
 // P(N >= k) con N ~ Poisson(lambda).
 export function overLine(lambda, line = 2.5) {
   if (!Number.isFinite(lambda) || lambda < 0) throw new Error('Lambda inválida');

@@ -42,7 +42,9 @@ export function configuredApp(env = process.env) {
     return football ??= new FootballData({ token: env.FOOTBALL_DATA_TOKEN.trim(), competitions: env.FOOTBALL_COMPETITIONS,
       fetcher: async (url, options) => Response.json(await footballHttp.get('football-data', url, options.headers)) });
   };
-  return createApp({ ...common, csvLeagues, openLiga, market, legs, minProbability, evidence: EVIDENCE[market] ?? null,
+  return createApp({ ...common, csvLeagues, openLiga, market, legs, minProbability,
+    // Ticket "El arriesgado del día" (2 over 3.5 + 2 over 2.5): TICKET_RISKY=false lo apaga.
+    risky: env.TICKET_RISKY?.trim() !== 'false', evidence: EVIDENCE[market] ?? null,
     repo: new SupabaseRepository({ url: env.SUPABASE_URL,
       secretKey: env.SUPABASE_SECRET_KEY, publishableKey: env.SUPABASE_PUBLISHABLE_KEY,
       serviceKey: env.SUPABASE_SERVICE_ROLE_KEY, anonKey: env.SUPABASE_ANON_KEY }),

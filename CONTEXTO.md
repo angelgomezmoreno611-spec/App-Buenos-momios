@@ -528,3 +528,17 @@ No se dejaron servidores activos ni se desplegó el proyecto.
   Implementado `src/openliga.js` (ODbL con atribución en la tanda), generate y
   settle con fallo tolerante. 56/56 pruebas. Prueba real: 411 partidos de
   historial; la 3. Liga vuelve el 20-22 nov tras el parón.
+- 2026-11-08: pedido del usuario: usar todas las fuentes gratuitas y añadir "El
+  arriesgado del día" (2 over 3.5 + 2 over 2.5). Backtest over 3.5 (30 ligas,
+  2022-07 en adelante, `bt-o35.mjs`): ≥0.40 3246 sel./42.1%, ≥0.45 1143/47.1%,
+  ≥0.50 334/48.8% (modelo algo sobreconfiado). Elegido mínimo 0.40 para 3.5 y
+  0.65 para 2.5; el ticket toma los 2 mejores de cada mercado entre los partidos
+  libres tras los tickets normales. Estimación ≈ 0.45²·0.63² ≈ 8% (1 de cada 12).
+  Modelo: línea 3.5; MARKETS con OVER_3_5; migración 006 (tickets.kind, ordinal
+  hasta 5, mercado OVER_3_5, máx. 4 normales + 1 arriesgado). Si publish falla con
+  el arriesgado, se reintenta sin él. Ligas CSV over 1.5: añadidas G1 (77/89.6%) e
+  IRL (43/83.7%) bajando el mínimo de selecciones a 40. No añadidas: CL/WC/EC de
+  football-data.org (copas: el modelo usa historial de la misma competición),
+  2. Bundesliga (79.4%, bajo el corte). App: ticket arriesgado aparte con borde
+  naranja. 59/59 backend, 13/13 Flutter, analyze limpio. PENDIENTE: usuario aplica
+  006 y se recompila la app.
