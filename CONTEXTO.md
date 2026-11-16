@@ -649,3 +649,11 @@ No se dejaron servidores activos ni se desplegó el proyecto.
   (21:00-22:55 Mazatlán). discover lanzado a mano: 782 partidos guardados.
   Con permiso del usuario: aplicada 011 y se borra la tanda vacía del 16
   (sin tickets ni guardados) para regenerarla.
+- 2026-11-16 00:00 (Mazatlán): discover a mano gastó 85/85 consultas AF: 782
+  partidos guardados, 82 analizados. Tanda vacía del 16 borrada (con permiso) y
+  regenerada: 3aff9fef…, 3 tickets de 3 (34-38% cada uno), 11 elegibles, sin
+  La soñadora (quedaron 2 libres, necesita 6). Todas las selecciones vienen de
+  API-Football (forma reciente; ligas no validadas una por una): no league
+  inglesa, Irlanda del Norte, Druha Liga ucraniana, CFL checa. 47 rechazos por
+  probabilidad y 30 por muestra insuficiente. Se liquidan con la lista de "ayer"
+  de discover (ahora programado).
