@@ -101,3 +101,11 @@ for (const threshold of [0.55, 0.58, 0.6, 0.62, 0.65, 0.7]) {
   console.log(`umbral ${threshold.toFixed(2)}  validación ${fmt(evaluate(validation, 'OVER_2_5', threshold, opts))}`);
   console.log(`             prueba     ${fmt(evaluate(test, 'OVER_2_5', threshold, opts))}`);
 }
+
+// Over 1.5 en la franja del respaldo (√umbral ≈ 0.79-0.81), mismo método de producción.
+console.log('\n== Over 1.5 según umbral (k=2, media de liga)');
+for (const threshold of [0.77, 0.79, 0.81, 0.85]) {
+  const opts = { method: 'shrink', k: 2, league: true };
+  console.log(`umbral ${threshold.toFixed(2)}  validación ${fmt(evaluate(validation, 'OVER_1_5', threshold, opts))}`);
+  console.log(`             prueba     ${fmt(evaluate(test, 'OVER_1_5', threshold, opts))}`);
+}

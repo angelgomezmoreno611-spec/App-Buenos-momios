@@ -41,16 +41,29 @@ export const MARKET_BLOCKED = Object.freeze({ OVER_1_5: ['PD', 'SA'], OVER_2_5: 
 // encogido: 60.6% validación / 63.9% prueba). Ticket ≈ 0.6^6 ≈ 5% (1 de cada 21).
 export const DREAMER = Object.freeze({ name: 'La soñadora', market: 'OVER_2_5', picks: 6, min: 0.6 });
 
-export function dreamerTicket(fixtures, history, { now, usedIds, number }) {
+// Con `alt15` (respaldo over 1.5), cada over 2.5 que falte se cambia por 2 over 1.5
+// con probabilidad ≥ √min (≈0.78; 0.79 en partidos de forma): de 6 a 12 partidos.
+export function dreamerTicket(fixtures, history, { now, usedIds, number, alt15 = null }) {
   const used = new Set(usedIds), { market, picks, min, name } = DREAMER, line = MARKETS[market].line;
   const ranked = fixtures.filter(f => !used.has(f.id) && !MARKET_BLOCKED[market].includes(f.league.id))
     .map(f => ({ match: f, prediction: predictFixture(f, history, { asOf: now, line }) }))
     .filter(x => x.prediction.eligible && x.prediction.probability >= min) // su propio mínimo, sin FORM_MIN
     .sort((a, b) => b.prediction.probability - a.prediction.probability || a.match.id.localeCompare(b.match.id))
     .slice(0, picks);
-  if (ranked.length < picks) return null;
   const selections = ranked.map(({ match: { formFeatures, formLeagueGoals, analyzed, ...match }, prediction }) =>
     ({ match, prediction, market, result: 'pending', score: null }));
+  const missing = picks - ranked.length;
+  if (missing > 0) {
+    if (!alt15) return null;
+    // ranked ya contiene todos los over 2.5 libres que llegan al mínimo: el respaldo no los toca.
+    const taken = new Set(ranked.map(x => x.match.id)), min15 = Math.sqrt(min);
+    const backup = alt15.filter(x => !used.has(x.match.id) && !taken.has(x.match.id)
+        && x.prediction.probability >= (x.form ? Math.max(min15, FORM_MIN.OVER_1_5) : min15))
+      .sort((a, b) => b.prediction.probability - a.prediction.probability || a.match.id.localeCompare(b.match.id))
+      .slice(0, 2 * missing).map(({ form, ...x }) => x);
+    if (backup.length < 2 * missing) return null;
+    selections.push(...backup);
+  }
   return { id: randomUUID(), number, kind: 'dreamer', name, status: 'pending', selections,
     probability: selections.reduce((p, x) => p * x.prediction.probability, 1) };
 }
@@ -69,7 +82,7 @@ export function generateBatch(snapshot, { now = Date.now(), timeZone, minProbabi
   const { line } = MARKETS[market];
   const age = now - Date.parse(snapshot.fetchedAt);
   if (!Number.isFinite(age) || age < -60_000 || age > 6 * 3_600_000) throw new Error('Datos desactualizados');
-  const seen = new Set(excludedIds), candidates = [], rejections = [], window = [];
+  const seen = new Set(excludedIds), candidates = [], rejections = [], window = [], alt15 = [];
   // Ventana: solo partidos del día de la tanda (hora local) o, sin sameDay, 72 h.
   const batchDate = day ?? dayKey(now, timeZone);
   const from = Math.max(now + 3_600_000, sameDay ? dayStart(batchDate, timeZone) : -Infinity);
@@ -80,6 +93,14 @@ export function generateBatch(snapshot, { now = Date.now(), timeZone, minProbabi
     const kickoff = Date.parse(f.kickoff);
     if (!(kickoff >= from && kickoff < until)) continue;
     window.push(f);
+    // Respaldo over 1.5 (tickets escalonados): cada over 2.5 que falte se cambia por 2 over 1.5.
+    if (ticketThresholds && market === 'OVER_2_5' && !MARKET_BLOCKED.OVER_1_5.includes(f.league.id)) {
+      const p15 = predictFixture(f, snapshot.history, { asOf: now, line: MARKETS.OVER_1_5.line });
+      if (p15.eligible) {
+        const { formFeatures, formLeagueGoals, analyzed, ...match } = f;
+        alt15.push({ match, prediction: p15, market: 'OVER_1_5', result: 'pending', score: null, form: isForm(f) });
+      }
+    }
     if (MARKET_BLOCKED[market].includes(f.league.id)) {
       rejections.push({ matchId: f.id, reason: 'Liga con bajo acierto medido en este mercado' });
       continue;
@@ -93,19 +114,33 @@ export function generateBatch(snapshot, { now = Date.now(), timeZone, minProbabi
     candidates.push({ match, prediction, market, result: 'pending', score: null });
   }
   candidates.sort((a, b) => b.prediction.probability - a.prediction.probability || a.match.id.localeCompare(b.match.id));
-  let tickets;
+  let tickets, unformed = 0;
   if (ticketThresholds) {
-    // Escalonado: cada ticket toma los mejores partidos libres si todos llegan a su
-    // umbral; si no, esos partidos pasan al siguiente nivel (umbral menor).
+    // Escalonado: cada ticket toma los mejores over 2.5 libres que llegan a su umbral
+    // (hasta `legs`). Por cada uno que falte entran 2 over 1.5 con probabilidad
+    // ≥ √umbral (0.81 × 0.81 ≈ 0.65: el ticket conserva su probabilidad), solo de
+    // partidos que no son candidatos a over 2.5. Sin completar, no se forma.
     tickets = [];
-    let pool = candidates;
+    const used = new Set();
     for (const threshold of tiers) {
-      const take = pool.slice(0, legs);
-      if (take.length < legs) break;
-      if (take.at(-1).prediction.probability < threshold || take.some(x => x.prediction.probability < minFor(x.match, market, threshold))) continue;
-      pool = pool.slice(legs);
-      tickets.push({ id: randomUUID(), number: tickets.length + 1, status: 'pending', threshold, selections: take,
-        probability: take.reduce((p, x) => p * x.prediction.probability, 1) });
+      const free25 = candidates.filter(x => !used.has(x.match.id));
+      const main = free25.filter(x => x.prediction.probability >= minFor(x.match, market, threshold)).slice(0, legs);
+      const missing = market === 'OVER_2_5' ? legs - main.length : 0;
+      if (market !== 'OVER_2_5' && main.length < legs) { unformed++; continue; }
+      let backup = [];
+      if (missing > 0) {
+        const min15 = Math.sqrt(threshold), taken = new Set(main.map(x => x.match.id)), as25 = new Set(free25.map(x => x.match.id));
+        // Solo partidos que no son candidatos a over 2.5: así no se les quitan a los tickets siguientes.
+        backup = alt15.filter(x => !used.has(x.match.id) && !taken.has(x.match.id) && !as25.has(x.match.id)
+            && x.prediction.probability >= (x.form ? Math.max(min15, FORM_MIN.OVER_1_5) : min15))
+          .sort((a, b) => b.prediction.probability - a.prediction.probability || a.match.id.localeCompare(b.match.id))
+          .slice(0, 2 * missing).map(({ form, ...x }) => x);
+        if (backup.length < 2 * missing) { unformed++; continue; }
+      }
+      const selections = [...main, ...backup];
+      selections.forEach(x => used.add(x.match.id));
+      tickets.push({ id: randomUUID(), number: tickets.length + 1, status: 'pending', threshold, selections,
+        probability: selections.reduce((p, x) => p * x.prediction.probability, 1) });
     }
   } else {
     const count = Math.min(maxTickets, Math.floor(candidates.length / legs));
@@ -120,9 +155,12 @@ export function generateBatch(snapshot, { now = Date.now(), timeZone, minProbabi
       ticket.probability *= pick.prediction.probability;
     }
   }
+  // Partidos rechazados en over 2.5 que entraron como over 1.5 ya no son rechazos.
+  const usedIds = new Set(tickets.flatMap(t => t.selections.map(x => x.match.id)));
+  const finalRejections = rejections.filter(r => !usedIds.has(r.matchId));
   // La soñadora (opcional), con partidos que no usaron los tickets normales.
   const extra = dreamer ? dreamerTicket(window, snapshot.history, {
-    now, number: tickets.length + 1, usedIds: tickets.flatMap(t => t.selections.map(x => x.match.id)) }) : null;
+    now, number: tickets.length + 1, usedIds: [...usedIds], alt15: ticketThresholds && market === 'OVER_2_5' ? alt15 : null }) : null;
   return {
     id: randomUUID(), day: batchDate, mode, sameDay,
     createdAt: new Date(now).toISOString(), sourceUpdatedAt: snapshot.fetchedAt,
@@ -131,15 +169,18 @@ export function generateBatch(snapshot, { now = Date.now(), timeZone, minProbabi
     // La evidencia solo describe al modelo con el mismo mercado y umbral con que se midió.
     ...(evidence && evidence.threshold === minProbability && evidence.market === market ? { evidence }
       : market === 'OVER_2_5' && minProbability === MODEL_EVIDENCE.threshold ? { evidence: MODEL_EVIDENCE } : {}),
-    tickets: extra ? [...tickets, extra] : tickets, eligibleMatches: candidates.length, missingMatches: Math.max(0, tiers.length * legs - candidates.length),
-    rejections, warnings: [
+    tickets: extra ? [...tickets, extra] : tickets, eligibleMatches: candidates.length, missingMatches: ticketThresholds ? unformed * legs : Math.max(0, tiers.length * legs - candidates.length),
+    rejections: extra ? finalRejections.filter(r => !extra.selections.some(x => x.match.id === r.matchId)) : finalRejections, warnings: [
       ...(snapshot.warnings ?? []),
       ...(mode === 'demo' ? ['DEMOSTRACIÓN: equipos, resultados y probabilidades sintéticos.'] : []),
       'Probabilidades estimadas solo con marcadores históricos; sin garantía de ganancias.',
       'Probabilidad del ticket calculada suponiendo independencia; pueden existir correlaciones.',
       'Sin cuotas actuales: no se calcula valor esperado ni rentabilidad.',
       ...([...tickets, ...(extra ? [extra] : [])].some(t => t.selections.some(x => x.prediction.modelVersion?.startsWith('form-af-v1'))) ? [FORM_EVIDENCE] : []),
-      ...(extra ? [`${DREAMER.name}: 6 over 2.5, probabilidad conjunta estimada ${Math.round(extra.probability * 100)}%. Alto riesgo.`] : [])
+      ...(tickets.some(t => t.selections.some(x => x.market === 'OVER_1_5') && market === 'OVER_2_5')
+        ? ['Respaldo over 1.5: si faltan over 2.5 en un ticket, cada uno se cambia por 2 over 1.5 con probabilidad de al menos la raíz del umbral (≈0.81 para 0.65), para conservar la probabilidad del ticket.'] : []),
+      ...(extra ? [`${DREAMER.name}: ${[['OVER_2_5', '2.5'], ['OVER_1_5', '1.5']].map(([m, l]) => [extra.selections.filter(x => x.market === m).length, l])
+        .filter(([c]) => c).map(([c, l]) => `${c} over ${l}`).join(' + ')}, probabilidad conjunta estimada ${Math.round(extra.probability * 100)}%. Alto riesgo.`] : [])
     ]
   };
 }

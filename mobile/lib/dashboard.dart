@@ -342,6 +342,8 @@ class _DashboardState extends State<Dashboard> with WidgetsBindingObserver {
                 if (_batch?.evidence != null) _batch!.evidence!.summary,
                 ticket.isRisky
                     ? 'Ticket de alto riesgo: 2 over 3.5 (4 goles o más) y 2 over 2.5 (3 goles o más) en 90 minutos más descuento.'
+                    : ticket.lineLabel == 'mixto'
+                    ? 'Ticket con respaldo: cada over 2.5 que faltó se cambió por 2 over 1.5. Over 2.5 = 3 goles o más; over 1.5 = 2 goles o más, en 90 minutos más descuento.'
                     : ticket.isDreamer
                     ? 'Ticket soñador de alto riesgo: ${ticket.legs} partidos over 2.5 (3 goles o más) en 90 minutos más descuento.'
                     : 'Over ${ticket.lineLabel} significa ${ticket.picks.isEmpty ? 2 : ticket.picks.first.goalsNeeded} goles o más en 90 minutos más descuento.',

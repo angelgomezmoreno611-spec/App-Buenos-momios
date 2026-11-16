@@ -701,3 +701,13 @@ No se dejaron servidores activos ni se desplegó el proyecto.
   había guardado): dc5a5ac6…, sigue en 1 ticket (5 elegibles ≥0.62; faltan 4).
   APK v3 publicado (release app-v3) para instalar con el botón "Actualizar"
   (el teléfono no estaba por USB).
+- 2026-11-16: respaldo over 1.5 (idea del usuario): en cada ticket escalonado,
+  cada over 2.5 que falta se cambia por 2 over 1.5 con probabilidad ≥ √umbral
+  (0.81 / 0.79 / 0.79), solo de partidos que no son candidatos a over 2.5 (si
+  no, el Ticket 01 se los quitaba a los siguientes: lo detectó una prueba). Sin
+  over 2.5 → 6 over 1.5. La soñadora (opción 1 del usuario): igual, 2 over 1.5
+  con ≥ √0.60 ≈ 0.78 por cada over 2.5 que falta, hasta 12 partidos.
+  FORM_MIN over 1.5 bajado de 0.85 a 0.79: backtest:form over 1.5 ≥0.79 →
+  82.3% validación / 82.7% prueba; con 0.85 el respaldo no servía (en Poisson
+  over 1.5 ≥0.85 implica over 2.5 ≥0.66). Migración 012 (normales 3-6, soñadora
+  6-12) aplicada con `db push` y verificada. 74/74 backend, analyze limpio.

@@ -205,3 +205,72 @@ test('tickets escalonados: 0.65 / 0.63 / 0.62 y La soñadora desde 0.60', async 
   assert.deepEqual(low.tickets.map(t => [t.number, t.threshold]), [[1, 0.63], [2, 0.62]]);
   assert.throws(() => generateBatch(snapshot, { now, ticketThresholds: [0.4] }), /Umbrales por ticket/);
 });
+test('respaldo over 1.5: cada over 2.5 que falta se cambia por 2 over 1.5 con ≥ √umbral', async () => {
+  const { formPredict } = await import('../src/apifootball.js');
+  const now = Date.parse('2026-11-05T17:00:00Z'), base = demoSnapshot(now);
+  const kick = new Date(now + 5 * 3_600_000).toISOString();
+  let n = 0;
+  const form = g => { const id = n++; return { id: `af-${id}`, league: { id: 'af-9', name: 'Liga X' }, home: { id: `h${id}`, name: `H${id}` },
+    away: { id: `a${id}`, name: `A${id}` }, kickoff: kick, status: 'TIMED',
+    formFeatures: { homePlayed: 8, awayPlayed: 8, homeFor: g / 2, homeAgainst: g / 2, awayFor: g / 2, awayAgainst: g / 2,
+      homeLast5For: g / 2, homeLast5Against: g / 2, awayLast5For: g / 2, awayLast5Against: g / 2 } }; };
+  const p = (g, line) => formPredict(form(g), form(g).formFeatures, { line, asOf: now }).probability;
+  const grid = Array.from({ length: 300 }, (_, i) => 2 + i * 0.01);
+  const g25 = grid.find(g => p(g, 2.5) >= 0.66 && p(g, 2.5) < 0.7);
+  // Over 2.5 por debajo de 0.60 pero over 1.5 ≥ √0.65 ≈ 0.806.
+  const g15 = grid.find(g => p(g, 2.5) < 0.6 && p(g, 1.5) >= 0.81);
+  assert.ok(g25 && g15);
+  n = 0;
+  // 2 over 2.5 buenos + 4 partidos solo aptos para over 1.5.
+  const fixtures = [form(g25), form(g25), form(g15), form(g15), form(g15), form(g15)];
+  const batch = generateBatch({ ...base, fixtures }, { now, legs: 3, ticketThresholds: [0.65, 0.63, 0.62] });
+  assert.equal(batch.tickets.length, 1);
+  const t = batch.tickets[0];
+  // Faltó 1 over 2.5 → 2 over 2.5 + 2 over 1.5 (4 partidos); sobran 2 over 1.5 (no alcanzan para el siguiente).
+  assert.deepEqual(t.selections.map(s => s.market), ['OVER_2_5', 'OVER_2_5', 'OVER_1_5', 'OVER_1_5']);
+  assert.ok(t.selections.filter(s => s.market === 'OVER_1_5').every(s => s.prediction.probability >= Math.sqrt(0.65)));
+  assert.equal(new Set(t.selections.map(s => s.match.id)).size, 4);
+  assert.ok(batch.warnings.some(w => w.startsWith('Respaldo over 1.5')));
+  assert.ok(batch.rejections.every(r => !t.selections.some(s => s.match.id === r.matchId)));
+  // Sin over 2.5: 6 over 1.5 (faltaron 3).
+  n = 0;
+  const only15 = generateBatch({ ...base, fixtures: Array.from({ length: 6 }, () => form(g15)) }, { now, legs: 3, ticketThresholds: [0.65] });
+  assert.deepEqual(only15.tickets[0].selections.map(s => s.market), Array(6).fill('OVER_1_5'));
+  // Sin respaldo suficiente, no se forma y cuenta como faltante.
+  n = 0;
+  const short = generateBatch({ ...base, fixtures: [form(g25), form(g15)] }, { now, legs: 3, ticketThresholds: [0.65] });
+  assert.equal(short.tickets.length, 0);
+  assert.equal(short.missingMatches, 3);
+});
+test('La soñadora con respaldo: cada over 2.5 que falta son 2 over 1.5 (hasta 12 partidos)', async () => {
+  const { formPredict } = await import('../src/apifootball.js');
+  const now = Date.parse('2026-11-05T17:00:00Z'), base = demoSnapshot(now);
+  const kick = new Date(now + 5 * 3_600_000).toISOString();
+  let n = 0;
+  const form = g => { const id = n++; return { id: `af-${id}`, league: { id: 'af-9', name: 'Liga X' }, home: { id: `h${id}`, name: `H${id}` },
+    away: { id: `a${id}`, name: `A${id}` }, kickoff: kick, status: 'TIMED',
+    formFeatures: { homePlayed: 8, awayPlayed: 8, homeFor: g / 2, homeAgainst: g / 2, awayFor: g / 2, awayAgainst: g / 2,
+      homeLast5For: g / 2, homeLast5Against: g / 2, awayLast5For: g / 2, awayLast5Against: g / 2 } }; };
+  const p = (g, line) => formPredict(form(g), form(g).formFeatures, { line, asOf: now }).probability;
+  const grid = Array.from({ length: 300 }, (_, i) => 2 + i * 0.01);
+  const g60 = grid.find(g => p(g, 2.5) >= 0.6 && p(g, 2.5) < 0.62); // solo sirve a La soñadora en over 2.5
+  const g15 = grid.find(g => p(g, 2.5) < 0.6 && p(g, 1.5) >= 0.79); // solo sirve de respaldo over 1.5
+  assert.ok(g60 && g15);
+  n = 0;
+  // 4 over 2.5 para ella + 4 over 1.5 → faltan 2 → 4 + 4 = 8 partidos.
+  const fixtures = [...Array.from({ length: 4 }, () => form(g60)), ...Array.from({ length: 4 }, () => form(g15))];
+  // Umbral normal inalcanzable (0.95) para aislar a La soñadora.
+  const batch = generateBatch({ ...base, fixtures }, { now, legs: 3, dreamer: true, ticketThresholds: [0.95] });
+  const d = batch.tickets.find(t => t.kind === 'dreamer');
+  assert.ok(d);
+  assert.deepEqual(d.selections.map(s => s.market), [...Array(4).fill('OVER_2_5'), ...Array(4).fill('OVER_1_5')]);
+  assert.ok(batch.warnings.some(w => w.startsWith('La soñadora: 4 over 2.5 + 4 over 1.5')));
+  // Ningún over 2.5: 12 over 1.5.
+  n = 0;
+  const all15 = generateBatch({ ...base, fixtures: Array.from({ length: 12 }, () => form(g15)) }, { now, legs: 3, dreamer: true, ticketThresholds: [0.95] });
+  assert.equal(all15.tickets.find(t => t.kind === 'dreamer')?.selections.length, 12);
+  // Sin respaldo suficiente no se forma.
+  n = 0;
+  assert.equal(generateBatch({ ...base, fixtures: [...Array.from({ length: 4 }, () => form(g60)), form(g15)] },
+    { now, legs: 3, dreamer: true, ticketThresholds: [0.95] }).tickets.some(t => t.kind === 'dreamer'), false);
+});

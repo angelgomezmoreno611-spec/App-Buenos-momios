@@ -14,7 +14,8 @@ export const FORM_MODEL_VERSION = 'form-af-v1';
 // Umbral mínimo por mercado para partidos analizados con este método.
 // Over 2.5 en 0.62: con el método encogido 0.62 acertó 62.0% (validación) y 64.9%
 // (prueba); permite los tickets escalonados (0.65 / 0.63 / 0.62).
-export const FORM_MIN = Object.freeze({ OVER_1_5: 0.85, OVER_2_5: 0.62, OVER_3_5: 0.45 });
+// Over 1.5 en 0.79 (respaldo de tickets): en backtest:form 0.79 acertó 82.3% (validación) y 82.7% (prueba).
+export const FORM_MIN = Object.freeze({ OVER_1_5: 0.79, OVER_2_5: 0.62, OVER_3_5: 0.45 });
 export const FORM_EVIDENCE = 'Forma reciente (API-Football) con promedios ajustados a la media de la liga: en backtest (15 201 partidos, 2023-2026) over 2.5 con 65% o más acertó el 65.0% y over 1.5 con 85% o más el 85.6%. La liga concreta no está validada.';
 // Ligas ya cubiertas por football-data.org, CSV u OpenLigaDB (ids de API-Football).
 export const COVERED_LEAGUES = new Set([39, 40, 140, 135, 78, 80, 61, 88, 94, 71, 103, 113, 169, 207, 203, 119, 253, 144, 262, 179, 183, 184, 244, 106, 197, 357]);
