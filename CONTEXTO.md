@@ -697,3 +697,7 @@ No se dejaron servidores activos ni se desplegó el proyecto.
   (por defecto 0.65,0.63,0.62 en over 2.5), FORM_MIN over 2.5 = 0.62,
   DREAMER.min = 0.60. App: "cada partido ≥ X%" en la tarjeta. 72/72 backend,
   18/18 Flutter. PENDIENTE: APK v3 (con Brave cerrado).
+- 2026-11-16 00:33: tanda del 16 regenerada con tickets escalonados (nadie la
+  había guardado): dc5a5ac6…, sigue en 1 ticket (5 elegibles ≥0.62; faltan 4).
+  APK v3 publicado (release app-v3) para instalar con el botón "Actualizar"
+  (el teléfono no estaba por USB).
