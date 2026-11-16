@@ -23,15 +23,16 @@ export const MARKETS = Object.freeze({ OVER_1_5: { line: 1.5, goals: 2 }, OVER_2
 // Ligas medidas con mal acierto en ese mercado (backtest): no entran en tickets.
 export const MARKET_BLOCKED = Object.freeze({ OVER_1_5: ['PD', 'SA'], OVER_2_5: [], OVER_3_5: [] });
 // "La soñadora": un ticket largo de 6 over 2.5 con los partidos que no usan los
-// tickets normales. Cada selección debe llegar a 0.65 (backtest over 2.5 ≥0.65:
-// ~61-65% de acierto), así que el ticket completo es ≈ 0.63^6 ≈ 6% (1 de cada 16).
-export const DREAMER = Object.freeze({ name: 'La soñadora', market: 'OVER_2_5', picks: 6, min: 0.65 });
+// tickets normales (que siguen en 0.65). Mínimo 0.62 por selección, también en
+// partidos de API-Football (backtest:form, método encogido: 0.62 → 62.0% en
+// validación y 64.9% en prueba). Ticket completo ≈ 0.63^6 ≈ 6% (1 de cada 16).
+export const DREAMER = Object.freeze({ name: 'La soñadora', market: 'OVER_2_5', picks: 6, min: 0.62 });
 
 export function dreamerTicket(fixtures, history, { now, usedIds, number }) {
   const used = new Set(usedIds), { market, picks, min, name } = DREAMER, line = MARKETS[market].line;
   const ranked = fixtures.filter(f => !used.has(f.id) && !MARKET_BLOCKED[market].includes(f.league.id))
     .map(f => ({ match: f, prediction: predictFixture(f, history, { asOf: now, line }) }))
-    .filter(x => x.prediction.eligible && x.prediction.probability >= minFor(x.match, market, min))
+    .filter(x => x.prediction.eligible && x.prediction.probability >= min) // su propio mínimo, sin FORM_MIN
     .sort((a, b) => b.prediction.probability - a.prediction.probability || a.match.id.localeCompare(b.match.id))
     .slice(0, picks);
   if (ranked.length < picks) return null;

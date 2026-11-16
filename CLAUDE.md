@@ -70,7 +70,8 @@ Producto: **3 tickets over 2.5 de 3 partidos** (umbral 0.65) por día, sin repet
 partidos (`TICKET_COUNT`, `TICKET_MARKET`, `TICKET_LEGS` = 3, 4 o 6; over 1.5 con 6 partidos y
 umbral 0.80 sigue disponible y ahí se excluyen LaLiga y Serie A, `MARKET_BLOCKED`).
 Además, el ticket especial **"La soñadora"** (`dreamerTicket`, `kind: 'dreamer'`):
-6 over 2.5 (≥0.65) con partidos que no usan los normales; `TICKET_DREAMER=false` lo
+6 over 2.5 (≥0.62, también en partidos de API-Football; los normales siguen en
+0.65) con partidos que no usan los normales; `TICKET_DREAMER=false` lo
 apaga. Requiere migración 008; si la base lo rechaza, la tanda se publica sin él.
 "El arriesgado del día" (`kind: 'risky'`) ya no se genera, pero la base y la app
 siguen leyendo tandas antiguas con él. La API liquida según el mercado de cada

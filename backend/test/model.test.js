@@ -133,6 +133,20 @@ test('La soñadora: 6 over 2.5 sin repetir partidos de los normales', async () =
   assert.equal(dreamerTicket(snapshot.fixtures.slice(0, 5), snapshot.history, { now, usedIds: [], number: 1 }), null);
   assert.equal(generateBatch(snapshot, { now, minProbability: 0.5, maxTickets: 1 }).tickets.some(t => t.kind === 'dreamer'), false);
   assert.throws(() => generateBatch(snapshot, { now, maxTickets: 5 }), /Número de tickets/);
+  // Normales en 0.65; La soñadora acepta desde 0.62, también con el modelo de forma (FORM_MIN 0.65).
+  assert.equal(DREAMER.min, 0.62);
+  const form = (id, goals) => ({ id: `af-${id}`, league: { id: 'af-9', name: 'Liga X' }, home: { id: `h${id}`, name: `H${id}` }, away: { id: `a${id}`, name: `A${id}` },
+    kickoff: new Date(now + 5 * 3_600_000).toISOString(), status: 'TIMED',
+    formFeatures: { homePlayed: 8, awayPlayed: 8, homeFor: goals / 2, homeAgainst: goals / 2, awayFor: goals / 2, awayAgainst: goals / 2,
+      homeLast5For: goals / 2, homeLast5Against: goals / 2, awayLast5For: goals / 2, awayLast5Against: goals / 2 } });
+  // Goles esperados entre 3 y 4: busca una forma que dé entre 0.62 y 0.65 en over 2.5.
+  const { formPredict } = await import('../src/apifootball.js');
+  const goals = Array.from({ length: 40 }, (_, i) => 3 + i * 0.025).find(g => { const p = formPredict(form(0, g), form(0, g).formFeatures, { line: 2.5, asOf: now }).probability; return p >= 0.62 && p < 0.65; });
+  assert.ok(goals, 'hay un partido entre 0.62 y 0.65');
+  const mid = Array.from({ length: 6 }, (_, i) => form(i + 1, goals));
+  const midBatch = generateBatch({ ...snapshot, fixtures: mid }, { now, minProbability: 0.65, maxTickets: 3, dreamer: true });
+  assert.equal(midBatch.tickets.filter(t => t.kind !== 'dreamer').length, 0); // ninguno llega a 0.65
+  assert.equal(midBatch.tickets.find(t => t.kind === 'dreamer')?.selections.length, 6);
   assert.deepEqual(resultOf({ status: 'FINISHED', homeGoals: 2, awayGoals: 2 }, 'OVER_3_5'), { result: 'won', score: '2–2' });
   assert.equal(resultOf({ status: 'FINISHED', homeGoals: 2, awayGoals: 1 }, 'OVER_3_5').result, 'lost');
 });

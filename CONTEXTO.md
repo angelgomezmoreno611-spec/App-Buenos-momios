@@ -671,3 +671,7 @@ No se dejaron servidores activos ni se desplegó el proyecto.
   Umbral con el método nuevo (validación / prueba): 0.62 → 1080 sel. 62.0% /
   1434 sel. 64.9%; 0.60 → 1405 sel. 60.6% / 1859 sel. 63.9%. Sin decidir: el
   usuario elige si baja FORM_MIN de over 2.5 (hoy 0.65).
+- 2026-11-16: decisión del usuario: tickets normales en 0.65 y La soñadora en
+  0.62 (DREAMER.min), aplicado también a partidos de API-Football (La soñadora ya
+  no usa FORM_MIN). Prueba nueva: 6 partidos de forma entre 0.62 y 0.65 llenan
+  La soñadora y ningún ticket normal. 70/70 backend.
