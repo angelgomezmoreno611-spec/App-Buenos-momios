@@ -614,3 +614,18 @@ No se dejaron servidores activos ni se desplegó el proyecto.
   heap 512 MiB); ya había sesión del usuario y `backend/.vercel` vinculado.
   Comprobado: en Production NO existen TICKET_* (rige el valor por defecto
   nuevo) y el despliegue del commit 2239ef6 está Ready.
+- 2026-11-15: StatArena: el usuario regeneró la clave (plan Free); reemplazada en
+  `backend/.env` (600). Comprobado: statarena-api.com y www responden con la web
+  (HTML), api.statarena-api.com no existe; la documentación solo da el host de
+  ejemplo `{endpoint}.statarena-api.com`. Precios (página oficial): Free = 100
+  consultas/hora, 8 competiciones elegidas, solo temporada actual; sin partidos
+  por fecha ni partido por id (Basic, $69/mes). Conclusión (supuesto razonado): en
+  Free no sirve para el modelo (sin historial) ni para liquidar (sin resultado
+  por partido); solo valdría si sus 8 ligas no están ya cubiertas. PENDIENTE: el
+  usuario debe dar el host ("endpoint") que muestra su panel y la lista de 8 ligas.
+- 2026-11-15 23:35 (Mazatlán): corrección del usuario: los tickets normales son
+  de 3 partidos (no 4). Por defecto TICKET_LEGS=3 (se admiten 3, 4 o 6); 3
+  tickets de 3 over 2.5 + La soñadora de 6. Estimación por ticket ≈0.63^3 ≈ 25%
+  (supuesto según backtest). Migración 009 (tickets.legs 3/4/6 y publish_batch)
+  aplicada con `supabase db push` y verificada (rechaza 5 partidos sin dejar
+  lote). 68/68 backend. La app no necesita APK nuevo: lee `legs` de cada tanda.

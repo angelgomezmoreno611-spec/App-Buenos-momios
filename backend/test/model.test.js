@@ -29,10 +29,16 @@ test('modelo rechaza muestras pequeñas, datos antiguos y contexto excluido', ()
   const old = s.history.map(m => ({ ...m, kickoff: new Date(now - 180 * 86400000).toISOString() }));
   assert.equal(predict(f, old, { asOf: now }).eligible, false);
 });
+test('tickets de 3 partidos por defecto: 4 × 3 sin repetir', () => {
+  const batch = generateBatch(demoSnapshot(now), { now });
+  assert.equal(batch.legs, 3);
+  assert.deepEqual(batch.tickets.map(t => t.selections.length), [3, 3, 3, 3]);
+  assert.equal(new Set(batch.tickets.flatMap(t => t.selections.map(s => s.match.id))).size, 12);
+});
 test('cuatro tickets completos, solo over 2.5 y dieciséis partidos únicos', () => {
   const snapshot = demoSnapshot(now);
   snapshot.fixtures.push(...snapshot.fixtures);
-  const batch = generateBatch(snapshot, { now });
+  const batch = generateBatch(snapshot, { now, legs: 4 });
   assert.equal(batch.tickets.length, 4);
   const picks = batch.tickets.flatMap(t => t.selections);
   assert.equal(new Set(picks.map(p => p.match.id)).size, 16);
@@ -51,12 +57,12 @@ test('incluye la evidencia medida solo con su mismo umbral', () => {
 });
 test('no rellena tickets con partidos malos y no reutiliza partidos anteriores', () => {
   const snapshot = demoSnapshot(now);
-  const batch = generateBatch(snapshot, { now });
+  const batch = generateBatch(snapshot, { now, legs: 4 });
   const excludedIds = batch.tickets.flatMap(t => t.selections.map(p => p.match.id));
-  const next = generateBatch(snapshot, { now, excludedIds });
+  const next = generateBatch(snapshot, { now, legs: 4, excludedIds });
   assert.equal(next.tickets.length, 0);
   assert.equal(next.missingMatches, 14);
-  assert.equal(generateBatch({ ...snapshot, fixtures: snapshot.fixtures.slice(0, 3) }, { now }).tickets.length, 0);
+  assert.equal(generateBatch({ ...snapshot, fixtures: snapshot.fixtures.slice(0, 3) }, { now, legs: 4 }).tickets.length, 0);
   assert.throws(() => generateBatch({ ...snapshot, fetchedAt: new Date(now - 7 * 3600000).toISOString() }, { now }), /desactualizados/);
 });
 test('día de Mazatlán sigue la zona local y no el UTC', () => {
@@ -106,7 +112,7 @@ test('La soñadora: 6 over 2.5 sin repetir partidos de los normales', async () =
   const { dreamerTicket, DREAMER } = await import('../src/tickets.js');
   const now = Date.parse('2026-11-05T17:00:00Z'), snapshot = demoSnapshot(now);
   // Con los normales llenos (4 × 4 de 20 partidos) quedan 4 libres: no se fuerza.
-  const full = generateBatch(snapshot, { now, minProbability: 0.5, dreamer: true });
+  const full = generateBatch(snapshot, { now, legs: 4, minProbability: 0.5, dreamer: true });
   assert.equal(full.tickets.some(t => t.kind === 'dreamer'), false);
   // Un solo ticket normal deja partidos libres para La soñadora.
   const batch = generateBatch(snapshot, { now, minProbability: 0.5, maxTickets: 1, dreamer: true });

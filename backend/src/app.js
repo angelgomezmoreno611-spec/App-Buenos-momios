@@ -25,7 +25,7 @@ async function readJson(req) {
   catch { throw Object.assign(new Error('JSON inválido'), { status: 400 }); }
 }
 
-export function createApp({ mode = 'live', repo, provider, push, cronSecret, timeZone = 'America/Mazatlan', minProbability = 0.65, allowedOrigin, footballService, csvLeagues = [], market = 'OVER_2_5', legs = 4, maxTickets = 4, evidence = null, openLiga = null, dreamer = false, apiFootball = null }) {
+export function createApp({ mode = 'live', repo, provider, push, cronSecret, timeZone = 'America/Mazatlan', minProbability = 0.65, allowedOrigin, footballService, csvLeagues = [], market = 'OVER_2_5', legs = 3, maxTickets = 4, evidence = null, openLiga = null, dreamer = false, apiFootball = null }) {
   if (!['live', 'demo'].includes(mode)) throw new Error('DATA_MODE debe ser live o demo');
   let demo;
   const send = (res, status, value) => { res.statusCode = status; res.end(JSON.stringify(value)); };

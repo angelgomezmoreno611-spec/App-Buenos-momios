@@ -19,10 +19,10 @@ export function configuredApp(env = process.env) {
   };
   if (mode === 'demo') return createApp(common);
   if (!env.CRON_SECRET || env.CRON_SECRET.length < 32) throw new Error('CRON_SECRET requiere mínimo 32 caracteres');
-  // Mercado, tamaño y número de tickets. Por defecto: 3 tickets over 2.5 de 4 partidos (umbral 0.65).
-  const market = env.TICKET_MARKET?.trim() || 'OVER_2_5', legs = Number(env.TICKET_LEGS ?? 4);
+  // Mercado, tamaño y número de tickets. Por defecto: 3 tickets over 2.5 de 3 partidos (umbral 0.65).
+  const market = env.TICKET_MARKET?.trim() || 'OVER_2_5', legs = Number(env.TICKET_LEGS ?? 3);
   const maxTickets = Number(env.TICKET_COUNT ?? 3);
-  if (!MARKETS[market] || ![4, 6].includes(legs)) throw new Error('TICKET_MARKET o TICKET_LEGS inválidos');
+  if (!MARKETS[market] || ![3, 4, 6].includes(legs)) throw new Error('TICKET_MARKET o TICKET_LEGS inválidos');
   if (!Number.isInteger(maxTickets) || maxTickets < 1 || maxTickets > 4) throw new Error('TICKET_COUNT debe estar entre 1 y 4');
   const minProbability = Number(env.MIN_PROBABILITY ?? (market === 'OVER_1_5' ? 0.8 : 0.65));
   // Ligas de football-data.co.uk (CSV): "none" las desactiva.

@@ -37,9 +37,9 @@ export function dreamerTicket(fixtures, history, { now, usedIds, number }) {
 }
 
 export function generateBatch(snapshot, { now = Date.now(), timeZone, minProbability = 0.65, mode = 'live', excludedIds = [],
-  market = 'OVER_2_5', legs = 4, evidence = null, maxTickets = 4, dreamer = false } = {}) {
+  market = 'OVER_2_5', legs = 3, evidence = null, maxTickets = 4, dreamer = false } = {}) {
   if (!Number.isFinite(minProbability) || minProbability < 0.5 || minProbability > 0.95) throw new Error('Umbral inválido');
-  if (!MARKETS[market] || ![4, 6].includes(legs)) throw new Error('Mercado o tamaño de ticket inválido');
+  if (!MARKETS[market] || ![3, 4, 6].includes(legs)) throw new Error('Mercado o tamaño de ticket inválido');
   if (!Number.isInteger(maxTickets) || maxTickets < 1 || maxTickets > 4) throw new Error('Número de tickets inválido');
   const { line } = MARKETS[market];
   const age = now - Date.parse(snapshot.fetchedAt);

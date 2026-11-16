@@ -3,7 +3,8 @@ import assert from 'node:assert/strict';
 import { readFile, readdir } from 'node:fs/promises';
 import { randomUUID } from 'node:crypto';
 import { PGlite } from '@electric-sql/pglite';
-import { demoBatch } from '../src/demo.js';
+import { demoBatch, demoSnapshot } from '../src/demo.js';
+import { generateBatch } from '../src/tickets.js';
 
 let db;
 const userA = '11a25e21-0be8-43b5-8f2f-be26735ff824';
@@ -34,12 +35,12 @@ before(async () => {
 after(async () => { await db?.close(); });
 const publish = batch => db.query('select public.publish_batch($1::jsonb) id', [JSON.stringify(batch)]);
 
-test('PostgreSQL publica 3x4 + La soñadora atómicamente y no reutiliza partidos entre días', async () => {
+test('PostgreSQL publica 3x3 + La soñadora atómicamente y no reutiliza partidos entre días', async () => {
   const batch = demoBatch(); batch.mode = 'live';
   assert.deepEqual(batch.tickets.map(t => t.kind ?? 'regular'), ['regular', 'regular', 'regular', 'dreamer']);
   const result = await publish(batch);
   assert.equal(result.rows[0].id, batch.id);
-  assert.equal((await db.query('select count(*)::int n from public.selections')).rows[0].n, 18);
+  assert.equal((await db.query('select count(*)::int n from public.selections')).rows[0].n, 15);
   assert.equal((await publish({ ...batch, id: randomUUID() })).rows[0].id, batch.id);
   const tomorrow = structuredClone(batch);
   tomorrow.id = randomUUID(); tomorrow.day = '2099-01-02';
@@ -47,12 +48,12 @@ test('PostgreSQL publica 3x4 + La soñadora atómicamente y no reutiliza partido
   await assert.rejects(publish(tomorrow), /unique constraint/);
   assert.equal((await db.query('select count(*)::int n from public.batches')).rows[0].n, 1);
 });
-test('PostgreSQL crea avisos solo con cuatro aciertos y resiste tareas repetidas', async () => {
+test('PostgreSQL crea avisos solo con todos los aciertos y resiste tareas repetidas', async () => {
   const { rows: [stored] } = await db.query('select payload from public.batches limit 1');
   const batch = stored.payload, ticket = batch.tickets[0];
   await db.query('select public.subscribe_device($1,$2,$3,$4)', [userA, batch.id, 'test-device-token-123456789', 'android']);
   const wins = ticket.selections.map(s => ({ matchId: s.match.id, result: 'won', score: '2–1' }));
-  await db.query('select public.apply_results($1)', [JSON.stringify(wins.slice(0, 3))]);
+  await db.query('select public.apply_results($1)', [JSON.stringify(wins.slice(0, -1))]);
   assert.equal((await db.query('select count(*)::int n from public.notification_outbox')).rows[0].n, 0);
   await db.query('select public.apply_results($1)', [JSON.stringify(wins)]);
   await db.query('select public.apply_results($1)', [JSON.stringify(wins)]);
@@ -115,8 +116,8 @@ test('migración conserva las tandas y fechas del historial anterior', async () 
   const legacy = await testDatabase();
   try {
     await legacy.exec(await readFile(new URL('../../supabase/migrations/001_initial.sql', import.meta.url), 'utf8'));
-    const batch = demoBatch(); batch.mode = 'live';
-    batch.tickets = batch.tickets.filter(t => !t.kind); // el esquema antiguo solo admite tickets normales
+    // El esquema antiguo solo admite tickets normales de 4 partidos.
+    const batch = generateBatch(demoSnapshot(), { legs: 4, mode: 'live' });
     await legacy.query('select public.publish_batch($1::jsonb)', [JSON.stringify(batch)]);
     await legacy.query('select public.subscribe_device($1,$2,$3,$4)', [userA, batch.id, 'legacy-device-token-123456789', 'android']);
     const original = await legacy.query('select user_id,batch_id,created_at from public.batch_subscriptions');

@@ -66,8 +66,8 @@ clave debug de firma y número de versión creciente).
 
 ## Arquitectura
 
-Producto: **3 tickets over 2.5 de 4 partidos** (umbral 0.65) por día, sin repetir
-partidos (`TICKET_COUNT`, `TICKET_MARKET`, `TICKET_LEGS`; over 1.5 con 6 partidos y
+Producto: **3 tickets over 2.5 de 3 partidos** (umbral 0.65) por día, sin repetir
+partidos (`TICKET_COUNT`, `TICKET_MARKET`, `TICKET_LEGS` = 3, 4 o 6; over 1.5 con 6 partidos y
 umbral 0.80 sigue disponible y ahí se excluyen LaLiga y Serie A, `MARKET_BLOCKED`).
 Además, el ticket especial **"La soñadora"** (`dreamerTicket`, `kind: 'dreamer'`):
 6 over 2.5 (≥0.65) con partidos que no usan los normales; `TICKET_DREAMER=false` lo
@@ -123,8 +123,8 @@ selección y el tamaño (`legs`) de cada ticket.
   compatibilidad para `SUPABASE_ANON_KEY`/`SUPABASE_SERVICE_ROLE_KEY`). Las
   `sb_secret_...` van solo en la cabecera `apikey`; Bearer solo para claves JWT antiguas.
 
-**Base de datos** (`supabase/migrations/`, aplicar en orden; 005 admite 4 o 6
-partidos y OVER_1_5/OVER_2_5): RLS por usuario;
+**Base de datos** (`supabase/migrations/`, aplicar en orden; 009 admite 3, 4 o 6
+partidos; 005 añadió OVER_1_5/OVER_2_5): RLS por usuario;
 `saved_batches` (002) guarda tandas vía RPC idempotente y las escrituras pasan por
 la API. Las pruebas usan PGlite (PostgreSQL embebido), sin Supabase real.
 
