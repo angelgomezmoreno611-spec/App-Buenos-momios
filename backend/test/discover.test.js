@@ -105,3 +105,23 @@ test('generate usa partidos analizados con umbral exigente y sin datos internos'
   assert.ok(batch.rejections.some(r => r.matchId === 'af-7'));
   assert.ok(batch.warnings.some(w => w.startsWith('Forma reciente (API-Football)')));
 });
+test('discover analiza solo partidos del día de la próxima tanda (hora de Mazatlán)', async () => {
+  const { targetDay } = await import('../src/discover.js');
+  assert.equal(targetDay(Date.parse('2026-11-16T04:00:00Z')), '2026-11-16'); // 21:00 del 15 → tanda del 16
+  assert.equal(targetDay(Date.parse('2026-11-16T07:30:00Z')), '2026-11-16'); // 00:30 del 16
+  assert.equal(targetDay(Date.parse('2026-11-16T19:00:00Z')), '2026-11-16'); // 12:00 del 16
+  const now = Date.parse('2026-11-16T04:00:00Z');
+  const mk = (id, kickoff) => ({ id: `af-${id}`, status: 'TIMED', kickoff, league: { id: 'af-500', afId: 500, name: 'Liga', round: 'Regular Season - 3' },
+    home: { id: `h${id}` }, away: { id: `a${id}` } });
+  const rows = [mk(1, '2026-11-16T06:30:00Z'), mk(2, '2026-11-16T18:00:00Z'), mk(3, '2026-11-17T06:30:00Z'), mk(4, '2026-11-17T08:00:00Z')];
+  const asked = [], analyzed = [];
+  const repo = { afUsage: async () => ({ calls: 0, lists: ['2026-11-15', '2026-11-16', '2026-11-17'] }), setAfUsage: async () => {},
+    afUpcoming: async (from, until) => { asked.push([from, until]); return rows.filter(m => Date.parse(m.kickoff) >= from && Date.parse(m.kickoff) <= until); },
+    afLeagueRates: async () => new Map(), saveAfFeatures: async id => analyzed.push(id) };
+  const fetcher = async () => Response.json({ response: [] });
+  const r = await runDiscover({ repo, key: 'k', fetcher, now, perRun: 6, sleep: async () => {} });
+  assert.equal(r.targetDay, '2026-11-16');
+  // 23:30 del 15 (06:30Z) es de esta noche y 01:00 del 17 (08:00Z) es de pasado mañana: fuera.
+  assert.deepEqual(analyzed.sort(), ['af-2', 'af-3']);
+  assert.equal(new Date(asked[0][0]).toISOString(), '2026-11-16T07:00:00.000Z');
+});

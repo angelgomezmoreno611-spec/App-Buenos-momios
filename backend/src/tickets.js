@@ -24,7 +24,7 @@ export function dayStart(day, timeZone = 'America/Mazatlan') {
   const first = guess - zoneOffset(guess, timeZone);
   return guess - zoneOffset(first, timeZone); // segunda pasada por cambios de horario
 }
-const nextDay = day => new Date(Date.parse(`${day}T12:00:00Z`) + 86_400_000).toISOString().slice(0, 10);
+export const nextDay = day => new Date(Date.parse(`${day}T12:00:00Z`) + 86_400_000).toISOString().slice(0, 10);
 
 // La tanda del día siguiente se genera a las 23:45 (Mazatlán): desde 20 min antes
 // de medianoche, generate y /api/tickets ya usan la fecha de mañana.
@@ -43,9 +43,9 @@ export const DREAMER = Object.freeze({ name: 'La soñadora', market: 'OVER_2_5',
 
 // Con `alt15` (respaldo over 1.5), cada over 2.5 que falte se cambia por 2 over 1.5
 // con probabilidad ≥ √min (≈0.78; 0.79 en partidos de forma): de 6 a 12 partidos.
-export function dreamerTicket(fixtures, history, { now, usedIds, number, alt15 = null }) {
+export function dreamerTicket(fixtures, history, { now, usedIds, number, alt15 = null, backupOnly = [] }) {
   const used = new Set(usedIds), { market, picks, min, name } = DREAMER, line = MARKETS[market].line;
-  const ranked = fixtures.filter(f => !used.has(f.id) && !MARKET_BLOCKED[market].includes(f.league.id))
+  const ranked = fixtures.filter(f => !used.has(f.id) && !MARKET_BLOCKED[market].includes(f.league.id) && !backupOnly.includes(f.league.id))
     .map(f => ({ match: f, prediction: predictFixture(f, history, { asOf: now, line }) }))
     .filter(x => x.prediction.eligible && x.prediction.probability >= min) // su propio mínimo, sin FORM_MIN
     .sort((a, b) => b.prediction.probability - a.prediction.probability || a.match.id.localeCompare(b.match.id))
@@ -69,7 +69,7 @@ export function dreamerTicket(fixtures, history, { now, usedIds, number, alt15 =
 }
 
 export function generateBatch(snapshot, { now = Date.now(), timeZone, minProbability = 0.65, mode = 'live', excludedIds = [],
-  market = 'OVER_2_5', legs = 3, evidence = null, maxTickets = 4, dreamer = false, day = null, sameDay = false, ticketThresholds = null } = {}) {
+  market = 'OVER_2_5', legs = 3, evidence = null, maxTickets = 4, dreamer = false, day = null, sameDay = false, ticketThresholds = null, backupOnly = [] } = {}) {
   if (!Number.isFinite(minProbability) || minProbability < 0.5 || minProbability > 0.95) throw new Error('Umbral inválido');
   if (!MARKETS[market] || ![3, 4, 6].includes(legs)) throw new Error('Mercado o tamaño de ticket inválido');
   if (!Number.isInteger(maxTickets) || maxTickets < 1 || maxTickets > 4) throw new Error('Número de tickets inválido');
@@ -101,8 +101,8 @@ export function generateBatch(snapshot, { now = Date.now(), timeZone, minProbabi
         alt15.push({ match, prediction: p15, market: 'OVER_1_5', result: 'pending', score: null, form: isForm(f) });
       }
     }
-    if (MARKET_BLOCKED[market].includes(f.league.id)) {
-      rejections.push({ matchId: f.id, reason: 'Liga con bajo acierto medido en este mercado' });
+    if (MARKET_BLOCKED[market].includes(f.league.id) || backupOnly.includes(f.league.id)) {
+      rejections.push({ matchId: f.id, reason: backupOnly.includes(f.league.id) ? 'Liga validada solo en over 1.5 (respaldo)' : 'Liga con bajo acierto medido en este mercado' });
       continue;
     }
     const prediction = predictFixture(f, snapshot.history, { asOf: now, line });
@@ -160,7 +160,7 @@ export function generateBatch(snapshot, { now = Date.now(), timeZone, minProbabi
   const finalRejections = rejections.filter(r => !usedIds.has(r.matchId));
   // La soñadora (opcional), con partidos que no usaron los tickets normales.
   const extra = dreamer ? dreamerTicket(window, snapshot.history, {
-    now, number: tickets.length + 1, usedIds: [...usedIds], alt15: ticketThresholds && market === 'OVER_2_5' ? alt15 : null }) : null;
+    now, number: tickets.length + 1, usedIds: [...usedIds], alt15: ticketThresholds && market === 'OVER_2_5' ? alt15 : null, backupOnly }) : null;
   return {
     id: randomUUID(), day: batchDate, mode, sameDay,
     createdAt: new Date(now).toISOString(), sourceUpdatedAt: snapshot.fetchedAt,

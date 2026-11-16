@@ -274,3 +274,25 @@ test('La soñadora con respaldo: cada over 2.5 que falta son 2 over 1.5 (hasta 1
   assert.equal(generateBatch({ ...base, fixtures: [...Array.from({ length: 4 }, () => form(g60)), form(g15)] },
     { now, legs: 3, dreamer: true, ticketThresholds: [0.95] }).tickets.some(t => t.kind === 'dreamer'), false);
 });
+test('ligas solo de respaldo (validadas en over 1.5) nunca entran como over 2.5', async () => {
+  const { formPredict } = await import('../src/apifootball.js');
+  const now = Date.parse('2026-11-05T17:00:00Z'), base = demoSnapshot(now);
+  const kick = new Date(now + 5 * 3_600_000).toISOString();
+  let n = 0;
+  const form = (g, league = 'af-9') => { const id = n++; return { id: `m-${id}`, league: { id: league, name: league }, home: { id: `h${id}`, name: `H${id}` },
+    away: { id: `a${id}`, name: `A${id}` }, kickoff: kick, status: 'TIMED',
+    formFeatures: { homePlayed: 8, awayPlayed: 8, homeFor: g / 2, homeAgainst: g / 2, awayFor: g / 2, awayAgainst: g / 2,
+      homeLast5For: g / 2, homeLast5Against: g / 2, awayLast5For: g / 2, awayLast5Against: g / 2 } }; };
+  const p = (g, line) => formPredict(form(g), form(g).formFeatures, { line, asOf: now }).probability;
+  const grid = Array.from({ length: 300 }, (_, i) => 2 + i * 0.01);
+  const big = grid.find(g => p(g, 2.5) >= 0.7); // muy goleador: sería over 2.5 en cualquier liga
+  n = 0;
+  // 2 over 2.5 normales + 2 partidos goleadores de MEX (solo respaldo).
+  const fixtures = [form(big), form(big), form(big, 'MEX'), form(big, 'MEX')];
+  const batch = generateBatch({ ...base, fixtures }, { now, legs: 3, dreamer: true, ticketThresholds: [0.65], backupOnly: ['MEX'] });
+  const t = batch.tickets.find(x => x.kind !== 'dreamer');
+  assert.ok(t);
+  assert.deepEqual(t.selections.map(s => [s.market, s.match.league.id]),
+    [['OVER_2_5', 'af-9'], ['OVER_2_5', 'af-9'], ['OVER_1_5', 'MEX'], ['OVER_1_5', 'MEX']]);
+  assert.ok(batch.tickets.every(x => x.selections.every(s => !(s.market === 'OVER_2_5' && s.match.league.id === 'MEX'))));
+});

@@ -32,14 +32,19 @@ export function configuredApp(env = process.env) {
   }
   const minProbability = ticketThresholds?.[0] ?? Number(env.MIN_PROBABILITY ?? (market === 'OVER_1_5' ? 0.8 : 0.65));
   // Ligas de football-data.co.uk (CSV): "none" las desactiva.
-  const csvLeagues = env.CSV_COMPETITIONS === undefined ? defaultCsvLeagues(market)
+  // En over 2.5 también se cargan las ligas validadas solo en over 1.5, pero únicamente
+  // como respaldo over 1.5 (`backupOnly`): nunca entran como over 2.5.
+  const withBackup = (defaults, market) => market === 'OVER_2_5' ? [...new Set([...defaults('OVER_2_5'), ...defaults('OVER_1_5')])] : defaults(market);
+  const backupOf = defaults => market === 'OVER_2_5' ? defaults('OVER_1_5').filter(c => !defaults('OVER_2_5').includes(c)) : [];
+  const csvLeagues = env.CSV_COMPETITIONS === undefined ? withBackup(defaultCsvLeagues, market)
     : env.CSV_COMPETITIONS.trim() === 'none' ? [] : [...new Set(env.CSV_COMPETITIONS.split(',').map(x => x.trim()).filter(Boolean))];
   if (csvLeagues.some(code => !CSV_LEAGUES[code])) throw new Error('CSV_COMPETITIONS contiene una liga no compatible');
   // OpenLigaDB (3. Liga): "none" la desactiva.
-  const oldbLeagues = env.OPENLIGADB_COMPETITIONS === undefined ? defaultOldbLeagues(market)
+  const oldbLeagues = env.OPENLIGADB_COMPETITIONS === undefined ? withBackup(defaultOldbLeagues, market)
     : env.OPENLIGADB_COMPETITIONS.trim() === 'none' ? [] : env.OPENLIGADB_COMPETITIONS.split(',').map(x => x.trim()).filter(Boolean);
   if (oldbLeagues.some(code => !OLDB_LEAGUES[code])) throw new Error('OPENLIGADB_COMPETITIONS contiene una liga no compatible');
   const openLiga = { leagues: oldbLeagues, get: url => footballHttp.get('openligadb', url) };
+  const backupOnly = [...backupOf(defaultCsvLeagues), ...backupOf(defaultOldbLeagues)].filter(c => csvLeagues.includes(c) || oldbLeagues.includes(c));
   // Un proveedor por instancia de la API, creado solo cuando un job lo necesita.
   // Auth, historial y lectura de tickets funcionan sin token de fútbol.
   let football;
@@ -50,7 +55,7 @@ export function configuredApp(env = process.env) {
     return football ??= new FootballData({ token: env.FOOTBALL_DATA_TOKEN.trim(), competitions: env.FOOTBALL_COMPETITIONS,
       fetcher: async (url, options) => Response.json(await footballHttp.get('football-data', url, options.headers)) });
   };
-  return createApp({ ...common, csvLeagues, openLiga, market, legs, minProbability, ticketThresholds,
+  return createApp({ ...common, csvLeagues, openLiga, market, legs, minProbability, ticketThresholds, backupOnly,
     maxTickets: ticketThresholds?.length ?? maxTickets,
     // Ticket "La soñadora" (6 over 2.5): TICKET_DREAMER=false lo apaga.
     dreamer: env.TICKET_DREAMER?.trim() !== 'false',

@@ -1,4 +1,5 @@
 import { afGet, normalizeAfFixture, isLeagueGame, featuresFromPrediction, pickForAnalysis, AF_DAILY_BUDGET } from './apifootball.js';
+import { dayKey, dayStart, nextDay } from './tickets.js';
 
 const DAY = 86_400_000;
 const utcDay = (t, offset = 0) => new Date(t + offset * DAY).toISOString().slice(0, 10);
@@ -7,7 +8,11 @@ const utcDay = (t, offset = 0) => new Date(t + offset * DAY).toISOString().slice
 // 5 min): cada ejecución hace como mucho `perRun` consultas separadas por
 // `spacingMs` (límite gratuito de 10/minuto) y termina antes del límite de Vercel.
 // Orden: 1) listas de ayer (resultados), hoy y mañana; 2) análisis de partidos.
-export async function runDiscover({ repo, key, fetcher, now = Date.now(), perRun = 6, spacingMs = 6500, sleep, budget = AF_DAILY_BUDGET }) {
+// Día de la próxima tanda (hora local): de 19:00 en adelante es mañana (la tanda se
+// genera a las 23:45 y discover corre de 21:00 a 22:55); antes, el día en curso.
+export const targetDay = (now, timeZone = 'America/Mazatlan') => dayKey(now + 5 * 3_600_000, timeZone);
+
+export async function runDiscover({ repo, key, fetcher, now = Date.now(), perRun = 6, spacingMs = 6500, sleep, budget = AF_DAILY_BUDGET, timeZone = 'America/Mazatlan' }) {
   if (!key) return { skipped: true, reason: 'Falta API_FOOTBALL_KEY' };
   const wait = sleep ?? (ms => new Promise(resolve => setTimeout(resolve, ms)));
   const day = utcDay(now), usage = await repo.afUsage(day);
@@ -28,14 +33,17 @@ export async function runDiscover({ repo, key, fetcher, now = Date.now(), perRun
     lists.push(date); done.lists.push(date); done.stored += matches.length;
     await repo.setAfUsage(day, usage.calls + calls, lists);
   }
-  // 2) Análisis de forma reciente, priorizando ligas con más goles observados.
+  // 2) Análisis de forma reciente, solo de partidos del día de la próxima tanda
+  //    (los tickets no usan otros días), priorizando ligas con más goles observados.
   const free = Math.min(perRun - calls, budget - usage.calls - calls);
   if (free > 0) {
-    const pending = await repo.afUpcoming(now, Date.parse(`${utcDay(now, 1)}T23:59:59Z`), { analyzed: false });
+    const target = targetDay(now, timeZone), from = dayStart(target, timeZone), until = dayStart(nextDay(target), timeZone) - 1;
+    done.targetDay = target;
+    const pending = await repo.afUpcoming(Math.max(now, from), until, { analyzed: false });
     const rates = await repo.afLeagueRates().catch(() => new Map());
     // Ligas sin datos acumulados cuentan como 0.75 (promedio típico de over 1.5).
     const score = m => { const r = rates.get(m.league.afId); return r && r.matches >= 10 ? r.over15 : 0.75; };
-    for (const m of pickForAnalysis(pending, { now, until: Infinity, limit: free, priority: score })) {
+    for (const m of pickForAnalysis(pending, { now, until, limit: free, priority: score })) {
       const data = await spend(`/predictions?fixture=${m.id.slice(3)}`);
       await repo.saveAfFeatures(m.id, featuresFromPrediction(data));
       done.analyzed++;

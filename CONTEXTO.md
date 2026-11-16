@@ -718,3 +718,8 @@ No se dejaron servidores activos ni se desplegó el proyecto.
   over 2.5. APK v4 publicado: la subida con `gh release create` se congeló 9 min;
   se subió con `gh release upload` y se publicó. release-apk.sh ahora crea el
   release como borrador, sube con timeout y 3 reintentos, y luego publica.
+- 2026-11-16: tareas para llenar tickets (seguimiento en `TAREAS.md`). (1) discover
+  analiza solo partidos del día de la próxima tanda (`targetDay` = fecha local de
+  now+5 h). (2) En over 2.5 se cargan también las ligas CSV/OpenLigaDB validadas
+  solo en over 1.5, como `backupOnly`: solo respaldo over 1.5, nunca over 2.5
+  (B1, MEX, SC0, FIN, SC2, SC3, POL, G1, IRL, BL3). 76/76 backend.
