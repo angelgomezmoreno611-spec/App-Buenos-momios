@@ -1,4 +1,4 @@
-import { afGet, normalizeAfFixture, isLeagueGame, featuresFromPrediction, pickForAnalysis, AF_DAILY_BUDGET } from './apifootball.js';
+import { afGet, normalizeAfFixture, isLeagueGame, featuresFromPrediction, featuresFromHistory, pickForAnalysis, AF_DAILY_BUDGET } from './apifootball.js';
 import { dayKey, dayStart, nextDay } from './tickets.js';
 
 const DAY = 86_400_000;
@@ -39,7 +39,12 @@ export async function runDiscover({ repo, key, fetcher, now = Date.now(), perRun
   if (free > 0) {
     const target = targetDay(now, timeZone), from = dayStart(target, timeZone), until = dayStart(nextDay(target), timeZone) - 1;
     done.targetDay = target;
-    const pending = await repo.afUpcoming(Math.max(now, from), until, { analyzed: false });
+    const all = await repo.afUpcoming(Math.max(now, from), until, { analyzed: false });
+    // Los que ya tienen forma calculada con resultados guardados no gastan consulta.
+    const finished = all.length && repo.afFinished
+      ? await Promise.resolve().then(() => repo.afFinished(all.map(m => m.league.afId), now - 400 * DAY)).catch(() => []) : [];
+    const pending = all.filter(m => !featuresFromHistory(m, finished));
+    done.localFeatures = all.length - pending.length;
     const rates = await repo.afLeagueRates().catch(() => new Map());
     // Ligas sin datos acumulados cuentan como 0.75 (promedio típico de over 1.5).
     const score = m => { const r = rates.get(m.league.afId); return r && r.matches >= 10 ? r.over15 : 0.75; };

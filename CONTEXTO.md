@@ -723,3 +723,9 @@ No se dejaron servidores activos ni se desplegó el proyecto.
   now+5 h). (2) En over 2.5 se cargan también las ligas CSV/OpenLigaDB validadas
   solo en over 1.5, como `backupOnly`: solo respaldo over 1.5, nunca over 2.5
   (B1, MEX, SC0, FIN, SC2, SC3, POL, G1, IRL, BL3). 76/76 backend.
+- 2026-11-16: (3) forma propia `featuresFromHistory` desde resultados FINISHED de
+  af_matches (repo.afFinished): temporada = desde la última pausa >45 días, mín. 2
+  casa/fuera y 5 recientes por equipo (como backtest-form.js). generate la usa en
+  partidos de API-Football sin análisis; discover no gasta /predictions en ellos
+  (`localFeatures` en su respuesta). Comprobado hoy: 88 próximos, 63 resultados
+  guardados, 0 con forma propia (empieza a rendir en ~5-6 semanas). 79/79.

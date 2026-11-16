@@ -178,6 +178,21 @@ export class SupabaseRepository {
     const rows = await this.request(`af_matches?${filter}&select=*&order=kickoff.asc&limit=1000`);
     return rows.map(r => this.#afRow(r));
   }
+  // Resultados guardados de esas ligas desde `since` (para calcular la forma sin consultas).
+  async afFinished(leagueIds, since) {
+    const ids = [...new Set(leagueIds)].filter(Number.isInteger);
+    if (!ids.length) return [];
+    const out = [], page = 1000;
+    for (let offset = 0; offset < 50_000; offset += page) {
+      const rows = await this.request(`af_matches?status=eq.FINISHED&league_id=in.(${ids.join(',')})` +
+        `&kickoff=gte.${encodeURIComponent(new Date(since).toISOString())}` +
+        `&select=id,league_id,league_name,round,kickoff,home_id,home_name,away_id,away_name,status,home_goals,away_goals` +
+        `&order=kickoff.asc,id.asc&limit=${page}&offset=${offset}`);
+      out.push(...rows.map(r => this.#afRow(r)));
+      if (rows.length < page) break;
+    }
+    return out;
+  }
   async afLeagueRates() {
     const rows = await this.request('af_league_rates?select=league_id,matches,over15&limit=5000');
     return new Map(rows.map(r => [r.league_id, { matches: r.matches, over15: r.over15 }]));

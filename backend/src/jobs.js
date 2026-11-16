@@ -1,6 +1,6 @@
 import { generateBatch, batchDay, resultOf, DREAMER } from './tickets.js';
 import { deliverNotifications } from './push.js';
-import { lambdaFromOver15 } from './apifootball.js';
+import { lambdaFromOver15, featuresFromHistory } from './apifootball.js';
 import { syncCsv, CSV_LEAGUES, CSV_VALIDATION } from './csvleagues.js';
 import { oldbSnapshot, oldbResults, OLDB_LEAGUES, OLDB_VALIDATION, OLDB_ATTRIBUTION } from './openliga.js';
 
@@ -48,7 +48,12 @@ export async function runJob(kind, { repo, provider, push, timeZone, minProbabil
       }
       // API-Football: partidos ya analizados por el job discover (sin consultas aquí).
       if (afEnabled) {
-        const af = await repo.afUpcoming(now, now + 72 * 3_600_000, { analyzed: true }).catch(() => null);
+        // Partidos con análisis de API-Football o, si no lo tienen, con forma calculada
+        // por nosotros desde los resultados guardados (sin consultas).
+        const upcoming = await repo.afUpcoming(now, now + 72 * 3_600_000).catch(() => null);
+        const finished = upcoming?.length ? await Promise.resolve()
+          .then(() => repo.afFinished(upcoming.map(m => m.league.afId), now - 400 * DAY)).catch(() => []) : [];
+        const af = upcoming?.map(m => m.formFeatures ? m : { ...m, formFeatures: featuresFromHistory(m, finished) }) ?? null;
         // Media de goles de cada liga (tasa de over 1.5 acumulada) para encoger promedios.
         const rates = af ? await Promise.resolve().then(() => repo.afLeagueRates()).catch(() => new Map()) : new Map();
         const goalsOf = m => { const r = rates.get(m.league.afId); return r && r.matches >= 10 ? lambdaFromOver15(r.over15) : undefined; };

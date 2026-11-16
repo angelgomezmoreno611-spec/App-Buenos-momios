@@ -325,3 +325,24 @@ test('a las 23:45 de Mazatlán generate crea la tanda de mañana y el respaldo d
   assert.equal((await runJob('generate', { repo, provider, now: now + 16 * 60_000, timeZone: tz })).existing, true);
   assert.equal(result.batchId, stored.get('2026-11-16').id);
 });
+test('generate usa partidos de API-Football sin análisis si hay forma propia (sin consultas)', async () => {
+  const now = Date.parse('2026-11-16T15:00:00Z'), full = demoSnapshot(now);
+  const lg = { id: 'af-700', afId: 700, name: 'Liga goleadora', round: 'Regular Season - 9' };
+  const res = [];
+  // Muchos goles en casa del local y fuera del visitante → over 2.5 alto.
+  for (let i = 0; i < 6; i++) for (const [h, a] of [['A', `o${i}`], [`p${i}`, 'B'], ['C', `q${i}`], [`r${i}`, 'D'], ['E', `s${i}`], [`t${i}`, 'F']]) {
+    res.push({ id: `${h}${a}${i}`, league: lg, kickoff: new Date(now - (40 - i * 6) * 86_400_000).toISOString(), home: { id: h }, away: { id: a },
+      status: 'FINISHED', homeGoals: 3, awayGoals: 2 });
+  }
+  const fx = (id, h, a) => ({ id, league: lg, kickoff: new Date(now + 4 * 3_600_000).toISOString(), status: 'TIMED',
+    home: { id: h, name: h }, away: { id: a, name: a }, formFeatures: null, analyzed: false });
+  let published;
+  const repo = { acquireLock: async () => 'l', releaseLock: async () => {}, getBatch: async () => null, usedMatches: async () => [],
+    history: async () => [], afUpcoming: async () => [fx('af-1', 'A', 'B'), fx('af-2', 'C', 'D'), fx('af-3', 'E', 'F')],
+    afFinished: async () => res, afLeagueRates: async () => new Map(), publish: async b => { published = b; return b.id; } };
+  const provider = { competitions: () => [], snapshot: async () => ({ ...full, fixtures: [], history: [] }) };
+  await runJob('generate', { repo, provider, now, timeZone: 'America/Mazatlan', afEnabled: true, legs: 3, sameDay: true, ticketThresholds: [0.65] });
+  const sel = published.tickets.flatMap(t => t.selections);
+  assert.deepEqual(sel.map(s => s.match.id).sort(), ['af-1', 'af-2', 'af-3']);
+  assert.ok(sel.every(s => s.prediction.features.source === 'local' && !('formFeatures' in s.match)));
+});

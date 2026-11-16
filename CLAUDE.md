@@ -117,8 +117,10 @@ vuelve a la ventana de 72 h; la demo usa 72 h).
   5 min de 05:00 a 06:55 UTC): listas del día → `af_matches` (migración 007), luego
   "predictions" de partidos de ligas NO cubiertas (prioriza ligas goleadoras por
   `af_league_rates`). generate usa `formPredict` (temporada casa/fuera + últimos 5)
-  con umbral `FORM_MIN` (over 1.5 ≥0.85); settle lee el resultado de la lista de
-  "ayer". IDs `af-`. `AF_DISCOVERY=false` lo apaga. Uso diario en `af_usage`.
+  con umbral `FORM_MIN`; settle lee el resultado de la lista de "ayer". Si un
+  partido no tiene análisis, generate calcula la forma con los resultados guardados
+  (`featuresFromHistory`) y discover no gasta consulta en él; discover solo analiza
+  partidos del día de la próxima tanda. IDs `af-`. `AF_DISCOVERY=false` lo apaga. Uso diario en `af_usage`.
 - `src/football/`: módulo independiente de información de partidos con ocho
   adaptadores (`providers.js`), normalizador común, transporte HTTP secuencial con
   límite de 2 MB por respuesta (`http.js`, compartido con `FootballData` para

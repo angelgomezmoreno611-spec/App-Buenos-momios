@@ -125,3 +125,43 @@ test('discover analiza solo partidos del día de la próxima tanda (hora de Maza
   assert.deepEqual(analyzed.sort(), ['af-2', 'af-3']);
   assert.equal(new Date(asked[0][0]).toISOString(), '2026-11-16T07:00:00.000Z');
 });
+test('forma propia: promedios de temporada casa/fuera y últimos 5 desde resultados guardados', async () => {
+  const { featuresFromHistory } = await import('../src/apifootball.js');
+  const lg = { id: 'af-700', afId: 700, name: 'Liga' };
+  const r = (d, h, a, hg, ag) => ({ id: `r${d}${h}${a}`, league: lg, kickoff: new Date(Date.parse('2026-08-01T18:00:00Z') + d * 86_400_000).toISOString(),
+    home: { id: h }, away: { id: a }, status: 'FINISHED', homeGoals: hg, awayGoals: ag });
+  // Temporada anterior (antes de una pausa de >45 días) que no debe contar en casa/fuera.
+  const old = [r(-120, 'A', 'X', 9, 9), r(-118, 'Y', 'B', 9, 9)];
+  const season = [
+    r(0, 'A', 'C', 3, 1), r(7, 'D', 'A', 0, 2), r(14, 'A', 'E', 2, 2), r(21, 'F', 'A', 1, 1), r(28, 'G', 'A', 0, 1),
+    r(1, 'C', 'B', 1, 2), r(8, 'B', 'D', 4, 0), r(15, 'E', 'B', 0, 3), r(22, 'B', 'F', 1, 1), r(29, 'B', 'G', 2, 0)];
+  const match = { id: 'af-9', league: lg, kickoff: new Date(Date.parse('2026-08-01T18:00:00Z') + 35 * 86_400_000).toISOString(), home: { id: 'A' }, away: { id: 'B' } };
+  const f = featuresFromHistory(match, [...old, ...season]);
+  // A en casa: 3-1 y 2-2 → 2.5 a favor, 1.5 en contra. B fuera: 2-1 y 3-0 → 2.5 a favor, 0.5 en contra.
+  assert.deepEqual([f.homePlayed, f.homeFor, f.homeAgainst, f.awayPlayed, f.awayFor, f.awayAgainst], [2, 2.5, 1.5, 2, 2.5, 0.5]);
+  assert.equal(f.source, 'local');
+  // Últimos 5 de A en la liga (todos de esta temporada): 3-1, 2-0, 2-2, 1-1, 1-0.
+  assert.equal(f.homeLast5For, (3 + 2 + 2 + 1 + 1) / 5);
+  // Sin muestra (equipo nuevo) o liga parada más de 45 días: null.
+  assert.equal(featuresFromHistory({ ...match, home: { id: 'Z' } }, season), null);
+  assert.equal(featuresFromHistory({ ...match, kickoff: '2027-01-01T00:00:00Z' }, season), null);
+});
+test('discover no gasta consultas en partidos con forma propia', async () => {
+  const lg = { id: 'af-700', afId: 700, name: 'Liga', round: 'Regular Season - 9' };
+  const now = Date.parse('2026-11-16T04:00:00Z');
+  const res = [];
+  for (let i = 0; i < 6; i++) {
+    const k = new Date(now - (40 - i * 7) * 86_400_000).toISOString();
+    res.push({ id: `h${i}`, league: lg, kickoff: k, home: { id: 'A' }, away: { id: `o${i}` }, status: 'FINISHED', homeGoals: 2, awayGoals: 1 });
+    res.push({ id: `a${i}`, league: lg, kickoff: k, home: { id: `p${i}` }, away: { id: 'B' }, status: 'FINISHED', homeGoals: 1, awayGoals: 2 });
+  }
+  const upcoming = [
+    { id: 'af-1', status: 'TIMED', kickoff: '2026-11-16T18:00:00Z', league: lg, home: { id: 'A' }, away: { id: 'B' } },
+    { id: 'af-2', status: 'TIMED', kickoff: '2026-11-16T19:00:00Z', league: { ...lg, afId: 701, id: 'af-701' }, home: { id: 'N' }, away: { id: 'M' } }];
+  const analyzed = [];
+  const repo = { afUsage: async () => ({ calls: 0, lists: ['2026-11-15', '2026-11-16', '2026-11-17'] }), setAfUsage: async () => {},
+    afUpcoming: async () => upcoming, afFinished: async () => res, afLeagueRates: async () => new Map(), saveAfFeatures: async id => analyzed.push(id) };
+  const out = await runDiscover({ repo, key: 'k', fetcher: async () => Response.json({ response: [] }), now, sleep: async () => {} });
+  assert.deepEqual(analyzed, ['af-2']); // af-1 ya tiene forma propia
+  assert.equal(out.localFeatures, 1);
+});

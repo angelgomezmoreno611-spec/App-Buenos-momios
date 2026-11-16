@@ -128,6 +128,35 @@ export function formPredict(fixture, rawFeatures, { line = 1.5, asOf = Date.now(
   };
 }
 
+// Forma calculada por nosotros, sin gastar /predictions: con los resultados que
+// discover guarda de las listas diarias se obtienen los mismos datos que en el
+// backtest (backtest-form.js): promedios de la temporada del local en casa y del
+// visitante fuera, y últimos 5 de cada uno en la liga. Temporada = desde la última
+// pausa de la liga de más de 45 días. Devuelve null si no hay muestra suficiente.
+export function featuresFromHistory(match, finished, { minPlayed = FORM_SHRINK.minPlayed } = {}) {
+  const t = Date.parse(match.kickoff), DAY = 86_400_000;
+  const league = finished.filter(r => r.league.afId === match.league.afId && r.status === 'FINISHED'
+      && Number.isInteger(r.homeGoals) && Number.isInteger(r.awayGoals) && Date.parse(r.kickoff) < t - 2 * HOUR)
+    .sort((a, b) => Date.parse(a.kickoff) - Date.parse(b.kickoff));
+  let start = 0;
+  for (let i = 1; i < league.length; i++) if (Date.parse(league[i].kickoff) - Date.parse(league[i - 1].kickoff) > 45 * DAY) start = i;
+  if (league.length && t - Date.parse(league.at(-1).kickoff) > 45 * DAY) return null; // la liga aún no reanuda
+  const season = league.slice(start);
+  const avg = xs => xs.reduce((a, b) => a + b, 0) / xs.length;
+  const home = season.filter(r => r.home.id === match.home.id), away = season.filter(r => r.away.id === match.away.id);
+  const last5 = id => league.filter(r => r.home.id === id || r.away.id === id).slice(-5)
+    .map(r => r.home.id === id ? { for: r.homeGoals, against: r.awayGoals } : { for: r.awayGoals, against: r.homeGoals });
+  const hr = last5(match.home.id), ar = last5(match.away.id);
+  if (home.length < minPlayed || away.length < minPlayed || hr.length < 5 || ar.length < 5) return null;
+  return {
+    source: 'local',
+    homePlayed: home.length, homeFor: avg(home.map(r => r.homeGoals)), homeAgainst: avg(home.map(r => r.awayGoals)),
+    awayPlayed: away.length, awayFor: avg(away.map(r => r.awayGoals)), awayAgainst: avg(away.map(r => r.homeGoals)),
+    homeLast5For: avg(hr.map(x => x.for)), homeLast5Against: avg(hr.map(x => x.against)),
+    awayLast5For: avg(ar.map(x => x.for)), awayLast5Against: avg(ar.map(x => x.against))
+  };
+}
+
 // Elige qué partidos analizar: ligas no cubiertas, de liga, en la ventana, y
 // repartidos entre ligas (una ronda por liga antes de repetir).
 export function pickForAnalysis(fixtures, { now, until, limit, priority = () => 0 }) {
