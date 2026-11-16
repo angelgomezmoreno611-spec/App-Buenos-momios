@@ -711,3 +711,10 @@ No se dejaron servidores activos ni se desplegó el proyecto.
   82.3% validación / 82.7% prueba; con 0.85 el respaldo no servía (en Poisson
   over 1.5 ≥0.85 implica over 2.5 ≥0.66). Migración 012 (normales 3-6, soñadora
   6-12) aplicada con `db push` y verificada. 74/74 backend, analyze limpio.
+- 2026-11-16 01:00: tanda del 16 regenerada con respaldo over 1.5 (nadie la había
+  guardado): fecd19ff…, 1 ticket (nivel 0.63, 3 over 2.5 de CONCACAF). Hoy (lunes,
+  fecha FIFA) API-Football solo tiene 47 partidos del día, los 47 analizados; 35
+  bajo el umbral y 6 sin muestra. Ningún over 1.5 ≥0.79 que no fuera candidato a
+  over 2.5. APK v4 publicado: la subida con `gh release create` se congeló 9 min;
+  se subió con `gh release upload` y se publicó. release-apk.sh ahora crea el
+  release como borrador, sube con timeout y 3 reintentos, y luego publica.

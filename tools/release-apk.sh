@@ -31,7 +31,16 @@ cp "$apk" "$out"
 ls -lh "$out"
 
 if "$publish"; then
-  gh release create "app-v$build" "$out" --title "App v$build" --notes "$notes"
+  # Primero como borrador (la app ignora borradores); la subida del APK se reintenta
+  # con límite de tiempo porque a veces se congela, y al final se publica.
+  gh release create "app-v$build" --draft --title "App v$build" --notes "$notes"
+  for try in 1 2 3; do
+    timeout 300 gh release upload "app-v$build" "$out" --clobber && break
+    [[ $try == 3 ]] && { echo "No se pudo subir el APK; el release app-v$build quedó como borrador" >&2; exit 1; }
+    echo "Reintentando subida ($try)…"; sleep 5
+  done
+  gh release edit "app-v$build" --draft=false
+  gh release view "app-v$build" --json url --jq .url
 fi
 
 # Si el teléfono está conectado por USB, se instala directo.
