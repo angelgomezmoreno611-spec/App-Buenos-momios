@@ -675,3 +675,7 @@ No se dejaron servidores activos ni se desplegó el proyecto.
   0.62 (DREAMER.min), aplicado también a partidos de API-Football (La soñadora ya
   no usa FORM_MIN). Prueba nueva: 6 partidos de forma entre 0.62 y 0.65 llenan
   La soñadora y ningún ticket normal. 70/70 backend.
+- 2026-11-16 00:14: con permiso del usuario, tanda del 16 regenerada con el
+  método encogido y La soñadora en 0.62 (nadie la había guardado):
+  b107dd68…, 3 tickets de 3 (30-33%) + La soñadora (6.7%). Entran 5 partidos de
+  la Liga B de CONCACAF (selecciones con 2/2 partidos, no validadas).
