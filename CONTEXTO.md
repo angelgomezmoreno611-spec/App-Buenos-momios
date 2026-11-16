@@ -683,3 +683,7 @@ No se dejaron servidores activos ni se desplegó el proyecto.
   (00:00-23:59 Mazatlán, `dayStart`), no ventana de 72 h. Opción `sameDay` en
   generateBatch, activa en producción (TICKET_SAME_DAY=false la apaga); demo con
   72 h. 71/71 backend.
+- 2026-11-16 00:23: tanda del 16 regenerada con sameDay (con permiso; nadie la
+  había guardado): eebe1bd1…, 1 ticket de 3 (30.4%): Dinaz Vyshhorod-Bratslav,
+  Guadalupe-Bermudas, Guyana-Puerto Rico. 3 elegibles, faltan 6, sin soñadora
+  (fecha FIFA). El primer intento chocó con el lock de settle (:20); reintento OK.
