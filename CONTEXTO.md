@@ -746,3 +746,9 @@ No se dejaron servidores activos ni se desplegó el proyecto.
   '8,11,14,17 3,15 * * *' UTC) aplicadas. Job fc ≤10 ligas/vuelta, 2 consultas por
   liga, ~94/día de 200. Sus ids AF en COVERED_LEAGUES (sin duplicados). Atribución
   en la tanda. 86/86.
+- 2026-11-16: primer job fc en producción falló con HTTP 500 de la base: ids
+  repetidos en el mismo upsert (29 de 9277 resultados: mismos equipos y día). Como
+  no se marcaba la sincronización, 4 vueltas repitieron 10 ligas y se agotó la cuota
+  de 200 (se reinicia 00:00 UTC). Corregido: storeFcMatches deduplica (gana el
+  FINISHED), get se detiene con ≤5 consultas restantes, el job no sigue sin
+  catálogo. 87/87. Primera carga: cron 03:08 UTC del 17.

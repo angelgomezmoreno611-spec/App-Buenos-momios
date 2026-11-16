@@ -51,12 +51,16 @@ export function configuredApp(env = process.env) {
   const fcLeagues = !env.FOOTBALL_CHARTS_KEY?.trim() || env.FC_COMPETITIONS?.trim() === 'none' ? []
     : env.FC_COMPETITIONS ? env.FC_COMPETITIONS.split(',').map(x => x.trim()).filter(Boolean) : Object.keys(FC_LEAGUES);
   if (fcLeagues.some(l => !FC_LEAGUES[l])) throw new Error('FC_COMPETITIONS contiene una liga no compatible');
-  let fcLast = 0;
+  let fcLast = 0, fcRemaining = Infinity;
   const fc = fcLeagues.length ? { key: env.FOOTBALL_CHARTS_KEY.trim(), leagues: fcLeagues, perRun: 10, get: async path => {
     const wait = fcLast + 1100 - Date.now();
     if (wait > 0) await new Promise(resolve => setTimeout(resolve, wait));
     fcLast = Date.now();
+    // Margen de 5 consultas del límite diario (200 por correo, se reinicia a las 00:00 UTC).
+    if (fcRemaining <= 5) throw new Error('Football Charts: cuota diaria casi agotada');
     const response = await fetch(`${FC_BASE}${path}`, { headers: { Authorization: `Bearer ${env.FOOTBALL_CHARTS_KEY.trim()}` }, signal: AbortSignal.timeout(15_000) });
+    const left = Number(response.headers.get('x-ratelimit-remaining'));
+    if (Number.isFinite(left)) fcRemaining = left;
     if (!response.ok) throw new Error(`Football Charts: HTTP ${response.status}`);
     return response.json();
   } } : null;

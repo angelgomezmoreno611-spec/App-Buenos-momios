@@ -85,3 +85,18 @@ test('settle liquida partidos de Football Charts con lo guardado', async () => {
   await runJob('settle', { repo, provider: { results: async () => [] }, now: Date.now() });
   assert.deepEqual(applied, [{ matchId: 'fc-holland2-2026-11-20-a-b', result: 'won', score: '2–1' }]);
 });
+test('storeFcMatches quita ids repetidos (queda el terminado) y el job no sigue sin catálogo', async () => {
+  const { SupabaseRepository } = await import('../src/repository.js');
+  const bodies = [];
+  const repo = new SupabaseRepository({ url: 'https://x.supabase.co', secretKey: 'sb_secret_test', publishableKey: 'sb_publishable_test',
+    fetcher: async (url, opts) => { if (opts.method === 'POST') bodies.push(JSON.parse(opts.body)); return new Response(''); } });
+  const m = { id: 'fc-holland2-2026-11-20-a-b', league: { id: 'fc-holland2', name: 'X' }, kickoff: '2026-11-20T18:00:00.000Z',
+    home: { id: 'fc-holland2-a', name: 'A' }, away: { id: 'fc-holland2-b', name: 'B' } };
+  await repo.storeFcMatches([{ ...m, status: 'TIMED', homeGoals: null, awayGoals: null }, { ...m, status: 'FINISHED', homeGoals: 1, awayGoals: 0 }]);
+  assert.equal(bodies[0].length, 1);
+  assert.equal(bodies[0][0].status, 'FINISHED');
+  const jobRepo = { acquireLock: async () => 'l', releaseLock: async () => {}, fcSyncTimes: async () => new Map() };
+  const asked = [];
+  await assert.rejects(runJob('fc', { repo: jobRepo, now: Date.now(), fc: { key: 'k', leagues: ['holland2'], get: async p => { asked.push(p); return { error: { code: 'daily_limit' } }; } } }), /catálogo/);
+  assert.deepEqual(asked, ['/leagues/']); // no gastó consultas en ligas
+});

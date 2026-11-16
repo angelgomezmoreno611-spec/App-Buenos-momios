@@ -181,7 +181,8 @@ export async function runJob(kind, { repo, provider, push, timeZone, minProbabil
       const due = fc.leagues.filter(l => !(times.get(l) > now - 10 * 3_600_000))
         .sort((a, b) => (times.get(a) ?? 0) - (times.get(b) ?? 0)).slice(0, fc.perRun ?? 10);
       if (!due.length) return { skipped: true, reason: 'Todas las ligas están al día' };
-      const catalog = (await fc.get('/leagues/')).leagues ?? [];
+      const catalog = (await fc.get('/leagues/')).leagues;
+      if (!Array.isArray(catalog) || !catalog.length) throw new Error('Football Charts no devolvió el catálogo de ligas');
       const { results, fixtures, done, failed } = await syncFc(due, { get: fc.get, catalog });
       await repo.storeFcMatches([...results, ...fixtures], now - 400 * DAY);
       await repo.markFcSync(done);

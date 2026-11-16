@@ -139,7 +139,11 @@ export class SupabaseRepository {
   }
   // Football Charts: partidos de las ligas activas (job fc) y última sincronización.
   async storeFcMatches(matches, before) {
-    const rows = matches.map(m => ({
+    // Un id repetido en el mismo lote hace fallar el upsert (HTTP 500): se deja uno,
+    // el terminado si lo hay.
+    const unique = new Map();
+    for (const m of matches) if (!unique.has(m.id) || m.status === 'FINISHED') unique.set(m.id, m);
+    const rows = [...unique.values()].map(m => ({
       id: m.id, league: m.league.id.replace(/^fc-/, ''), league_name: m.league.name, kickoff: m.kickoff,
       home_id: m.home.id, home_name: m.home.name, away_id: m.away.id, away_name: m.away.name,
       status: m.status, home_goals: m.homeGoals, away_goals: m.awayGoals, synced_at: new Date().toISOString()
