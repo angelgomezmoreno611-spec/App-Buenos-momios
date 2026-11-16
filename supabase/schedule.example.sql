@@ -28,9 +28,10 @@ select cron.schedule('momios-csv', '27 12 * * 2,5', $$
   );
 $$);
 -- Descubrimiento con API-Football (plan gratuito, 100 consultas/día, 10/min):
--- cada 5 min de 05:00 a 06:55 UTC (22:00-23:55 Mazatlán), antes de generate.
+-- cada 5 min de 04:00 a 05:55 UTC (21:00-22:55 Mazatlán), antes de generate (23:45).
+-- En producción lo crea la migración 011.
 -- No usa el lock compartido; cada ejecución hace ≤6 consultas en <45 s.
-select cron.schedule('momios-discover', '*/5 5-6 * * *', $$
+select cron.schedule('momios-discover', '*/5 4-5 * * *', $$
   select net.http_post(
     url := (select decrypted_secret from vault.decrypted_secrets where name = 'buenos_momios_api_url') || '/api/jobs/discover',
     headers := jsonb_build_object('Content-Type','application/json','Authorization',
@@ -38,6 +39,9 @@ select cron.schedule('momios-discover', '*/5 5-6 * * *', $$
     body := '{}'::jsonb, timeout_milliseconds := 60000
   );
 $$);
+-- La tanda de mañana se genera a las 23:45 de Mazatlán (06:45 UTC; el backend
+-- usa la fecha siguiente desde las 23:40). Lo crea la migración 010.
+-- momios-generate (00:01) queda como respaldo: si la tanda ya existe, no hace nada.
 select cron.schedule('momios-generate', '1 7 * * *', $$
   select net.http_post(
     url := (select decrypted_secret from vault.decrypted_secrets where name = 'buenos_momios_api_url') || '/api/jobs/generate',

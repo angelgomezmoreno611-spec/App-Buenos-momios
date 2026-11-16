@@ -629,3 +629,23 @@ No se dejaron servidores activos ni se desplegó el proyecto.
   (supuesto según backtest). Migración 009 (tickets.legs 3/4/6 y publish_batch)
   aplicada con `supabase db push` y verificada (rechaza 5 partidos sin dejar
   lote). 68/68 backend. La app no necesita APK nuevo: lee `legs` de cada tanda.
+- 2026-11-15: StatArena resuelto. Host real: `https://live.statarena-api.com`
+  (encontrado por DNS; sin clave responde 401 `missing_api_key`). Guardado como
+  STATARENA_BASE_URL en `backend/.env`. Comprobado con 3 consultas: plan free,
+  100/hora y 1/segundo (cabeceras x-ratelimit-*), 8 competiciones: Champions,
+  Premier, Bundesliga, Serie A, LaLiga, Liga MX (816732), MLS, Nations League.
+  La tabla en vivo trae goles a favor/en contra en casa/fuera por equipo; los
+  próximos partidos por liga traen equipos y hora. Conclusión: no aporta a los
+  tickets. Todas sus ligas ya están cubiertas (football-data.org o CSV); Liga MX
+  no pasó backtest en over 2.5 y MLS está en playoffs. Sin historial ni partido
+  por id en Free. No integrada; opción futura: marcadores en vivo en "Partidos".
+- 2026-11-15/16: generación a las 23:45 de Mazatlán. Backend (593c729): desde
+  23:40 generate usa la fecha de mañana (`batchDay`) y /api/tickets muestra esa
+  tanda si existe. Migración 010: cron `momios-generate-early` '45 6 * * *'
+  (UTC); momios-generate 00:01 queda de respaldo. Comprobado: a las 06:45:13 UTC
+  se creó la tanda del 2026-11-16, pero con 0 tickets (6 partidos, todos <0.65;
+  fecha FIFA). Causa extra comprobada: el cron `momios-discover` NUNCA existió en
+  producción (af_usage vacío). Migración 011 lo crea de 04:00 a 05:55 UTC
+  (21:00-22:55 Mazatlán). discover lanzado a mano: 782 partidos guardados.
+  Con permiso del usuario: aplicada 011 y se borra la tanda vacía del 16
+  (sin tickets ni guardados) para regenerarla.
