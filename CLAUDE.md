@@ -76,6 +76,8 @@ apaga. Requiere migración 008; si la base lo rechaza, la tanda se publica sin �
 "El arriesgado del día" (`kind: 'risky'`) ya no se genera, pero la base y la app
 siguen leyendo tandas antiguas con él. La API liquida según el mercado de cada
 selección y el tamaño (`legs`) de cada ticket.
+Solo entran partidos del día de la tanda en hora de Mazatlán (`TICKET_SAME_DAY=false`
+vuelve a la ventana de 72 h; la demo usa 72 h).
 
 **Backend** (`backend/`, Node ESM sin framework, sin dependencias de runtime):
 - `src/config.js` → `configuredApp(env)` es el único punto de cableado: según

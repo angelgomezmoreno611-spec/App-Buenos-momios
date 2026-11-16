@@ -13,6 +13,19 @@ export function dayKey(now = Date.now(), timeZone = 'America/Mazatlan') {
   return ['year', 'month', 'day'].map(k => parts.find(x => x.type === k).value).join('-');
 }
 
+// Inicio (UTC, ms) del día local `day` (AAAA-MM-DD) en la zona horaria dada.
+function zoneOffset(t, timeZone) {
+  const p = Object.fromEntries(new Intl.DateTimeFormat('en-US', { timeZone, hourCycle: 'h23', year: 'numeric', month: '2-digit',
+    day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit' }).formatToParts(t).map(x => [x.type, x.value]));
+  return Date.UTC(+p.year, p.month - 1, +p.day, +p.hour, +p.minute, +p.second) - t;
+}
+export function dayStart(day, timeZone = 'America/Mazatlan') {
+  const guess = Date.parse(`${day}T00:00:00Z`);
+  const first = guess - zoneOffset(guess, timeZone);
+  return guess - zoneOffset(first, timeZone); // segunda pasada por cambios de horario
+}
+const nextDay = day => new Date(Date.parse(`${day}T12:00:00Z`) + 86_400_000).toISOString().slice(0, 10);
+
 // La tanda del día siguiente se genera a las 23:45 (Mazatlán): desde 20 min antes
 // de medianoche, generate y /api/tickets ya usan la fecha de mañana.
 export const GENERATE_AHEAD_MS = 20 * 60_000;
@@ -43,7 +56,7 @@ export function dreamerTicket(fixtures, history, { now, usedIds, number }) {
 }
 
 export function generateBatch(snapshot, { now = Date.now(), timeZone, minProbability = 0.65, mode = 'live', excludedIds = [],
-  market = 'OVER_2_5', legs = 3, evidence = null, maxTickets = 4, dreamer = false, day = null } = {}) {
+  market = 'OVER_2_5', legs = 3, evidence = null, maxTickets = 4, dreamer = false, day = null, sameDay = false } = {}) {
   if (!Number.isFinite(minProbability) || minProbability < 0.5 || minProbability > 0.95) throw new Error('Umbral inválido');
   if (!MARKETS[market] || ![3, 4, 6].includes(legs)) throw new Error('Mercado o tamaño de ticket inválido');
   if (!Number.isInteger(maxTickets) || maxTickets < 1 || maxTickets > 4) throw new Error('Número de tickets inválido');
@@ -51,10 +64,15 @@ export function generateBatch(snapshot, { now = Date.now(), timeZone, minProbabi
   const age = now - Date.parse(snapshot.fetchedAt);
   if (!Number.isFinite(age) || age < -60_000 || age > 6 * 3_600_000) throw new Error('Datos desactualizados');
   const seen = new Set(excludedIds), candidates = [], rejections = [], window = [];
+  // Ventana: solo partidos del día de la tanda (hora local) o, sin sameDay, 72 h.
+  const batchDate = day ?? dayKey(now, timeZone);
+  const from = Math.max(now + 3_600_000, sameDay ? dayStart(batchDate, timeZone) : -Infinity);
+  const until = sameDay ? dayStart(nextDay(batchDate), timeZone) : now + 72 * 3_600_000;
   for (const f of snapshot.fixtures) {
     if (seen.has(f.id)) continue;
     seen.add(f.id);
-    if (Date.parse(f.kickoff) < now + 3_600_000 || Date.parse(f.kickoff) > now + 72 * 3_600_000) continue;
+    const kickoff = Date.parse(f.kickoff);
+    if (!(kickoff >= from && kickoff < until)) continue;
     window.push(f);
     if (MARKET_BLOCKED[market].includes(f.league.id)) {
       rejections.push({ matchId: f.id, reason: 'Liga con bajo acierto medido en este mercado' });
@@ -84,7 +102,7 @@ export function generateBatch(snapshot, { now = Date.now(), timeZone, minProbabi
   const extra = dreamer ? dreamerTicket(window, snapshot.history, {
     now, number: tickets.length + 1, usedIds: tickets.flatMap(t => t.selections.map(x => x.match.id)) }) : null;
   return {
-    id: randomUUID(), day: day ?? dayKey(now, timeZone), mode,
+    id: randomUUID(), day: batchDate, mode, sameDay,
     createdAt: new Date(now).toISOString(), sourceUpdatedAt: snapshot.fetchedAt,
     source: snapshot.source, modelVersion: MODEL_VERSION, minProbability, market, line, legs, maxTickets,
     // La evidencia solo describe al modelo con el mismo mercado y umbral con que se midió.

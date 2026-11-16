@@ -150,3 +150,26 @@ test('La soñadora: 6 over 2.5 sin repetir partidos de los normales', async () =
   assert.deepEqual(resultOf({ status: 'FINISHED', homeGoals: 2, awayGoals: 2 }, 'OVER_3_5'), { result: 'won', score: '2–2' });
   assert.equal(resultOf({ status: 'FINISHED', homeGoals: 2, awayGoals: 1 }, 'OVER_3_5').result, 'lost');
 });
+test('sameDay: solo partidos del día de la tanda en hora de Mazatlán', async () => {
+  const { dayStart } = await import('../src/tickets.js');
+  const tz = 'America/Mazatlan';
+  assert.equal(new Date(dayStart('2026-11-16', tz)).toISOString(), '2026-11-16T07:00:00.000Z');
+  assert.equal(new Date(dayStart('2026-07-01', 'Europe/Madrid')).toISOString(), '2026-06-30T22:00:00.000Z');
+  // 10:00 de Mazatlán: el día termina a las 07:00 UTC siguientes (en 14 h).
+  const now = Date.parse('2026-11-05T17:00:00Z'), snapshot = demoSnapshot(now);
+  const end = dayStart('2026-11-06', tz);
+  const batch = generateBatch(snapshot, { now, timeZone: tz, minProbability: 0.5, sameDay: true, dreamer: true });
+  const kicks = batch.tickets.flatMap(t => t.selections.map(s => Date.parse(s.match.kickoff)));
+  assert.ok(kicks.length > 0 && kicks.every(k => k >= now + 3_600_000 && k < end));
+  assert.equal(batch.sameDay, true);
+  const wide = generateBatch(snapshot, { now, timeZone: tz, minProbability: 0.5, dreamer: true });
+  assert.ok(wide.tickets.flatMap(t => t.selections).some(s => Date.parse(s.match.kickoff) >= end));
+  // A las 23:45 se genera la tanda de mañana: entran partidos de mañana, no los de esta noche.
+  const late = Date.parse('2026-11-16T06:45:00Z');
+  const fx = (id, iso) => ({ ...snapshot.fixtures[id], id: `x-${id}`, kickoff: iso });
+  const lateSnap = { ...demoSnapshot(late), fixtures: [fx(0, '2026-11-16T06:59:00Z'), fx(1, '2026-11-16T08:00:00Z'), fx(2, '2026-11-17T06:59:00Z'), fx(3, '2026-11-17T07:30:00Z')] };
+  const lb = generateBatch(lateSnap, { now: late, timeZone: tz, day: '2026-11-16', minProbability: 0.5, legs: 3, sameDay: true });
+  // Solo x-1 (01:00 del 16) y x-2 (23:59 del 16) entran a la ventana: elegibles o rechazados.
+  assert.equal(lb.eligibleMatches + lb.rejections.length, 2);
+  assert.ok(lb.rejections.every(r => ['x-1', 'x-2'].includes(r.matchId)));
+});

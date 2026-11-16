@@ -679,3 +679,7 @@ No se dejaron servidores activos ni se desplegó el proyecto.
   método encogido y La soñadora en 0.62 (nadie la había guardado):
   b107dd68…, 3 tickets de 3 (30-33%) + La soñadora (6.7%). Entran 5 partidos de
   la Liga B de CONCACAF (selecciones con 2/2 partidos, no validadas).
+- 2026-11-16: pedido del usuario: tickets solo con partidos del día de la tanda
+  (00:00-23:59 Mazatlán, `dayStart`), no ventana de 72 h. Opción `sameDay` en
+  generateBatch, activa en producción (TICKET_SAME_DAY=false la apaga); demo con
+  72 h. 71/71 backend.

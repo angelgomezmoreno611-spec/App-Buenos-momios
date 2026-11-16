@@ -47,6 +47,8 @@ export function configuredApp(env = process.env) {
   return createApp({ ...common, csvLeagues, openLiga, market, legs, maxTickets, minProbability,
     // Ticket "La soñadora" (6 over 2.5): TICKET_DREAMER=false lo apaga.
     dreamer: env.TICKET_DREAMER?.trim() !== 'false',
+    // Solo partidos del día de la tanda (hora local); TICKET_SAME_DAY=false vuelve a 72 h.
+    sameDay: env.TICKET_SAME_DAY?.trim() !== 'false',
     // Descubrimiento de partidos con API-Football (plan gratuito); AF_DISCOVERY=false lo apaga.
     apiFootball: env.API_FOOTBALL_KEY?.trim() && env.AF_DISCOVERY?.trim() !== 'false' ? { key: env.API_FOOTBALL_KEY.trim() } : null, evidence: EVIDENCE[market] ?? null,
     repo: new SupabaseRepository({ url: env.SUPABASE_URL,
