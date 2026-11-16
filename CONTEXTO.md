@@ -738,3 +738,11 @@ No se dejaron servidores activos ni se desplegó el proyecto.
   MARKET_BLOCKED over 2.5 = las 9 ligas en API-Football; over 1.5 bloquea 7 (no
   AUT ni D2); AF_ANALYSIS_SKIP evita gastar /predictions en esas 7. Ids AF
   confirmados con 1 consulta /leagues?current=true. 80/80.
+- 2026-11-16: (6) Football Charts integrado (con permiso del usuario): clave en
+  backend/.env y Vercel (sensible); backtest de 58 ligas (descarga única 116
+  consultas, `npm run import:fc`): pasan 22 con el modelo de forma
+  (FC_VALIDATION: 15 en over 2.5 ≥0.62/≥62%, 19 en over 1.5 ≥0.79/≥80%; sesgo de
+  selección). Migraciones 013 (fc_matches, fc_sync) y 014 (cron momios-fc
+  '8,11,14,17 3,15 * * *' UTC) aplicadas. Job fc ≤10 ligas/vuelta, 2 consultas por
+  liga, ~94/día de 200. Sus ids AF en COVERED_LEAGUES (sin duplicados). Atribución
+  en la tanda. 86/86.

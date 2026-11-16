@@ -74,7 +74,7 @@ export function dreamerTicket(fixtures, history, { now, usedIds, number, alt15 =
 }
 
 export function generateBatch(snapshot, { now = Date.now(), timeZone, minProbability = 0.65, mode = 'live', excludedIds = [],
-  market = 'OVER_2_5', legs = 3, evidence = null, maxTickets = 4, dreamer = false, day = null, sameDay = false, ticketThresholds = null, backupOnly = [] } = {}) {
+  market = 'OVER_2_5', legs = 3, evidence = null, maxTickets = 4, dreamer = false, day = null, sameDay = false, ticketThresholds = null, backupOnly = [], blocked15 = [] } = {}) {
   if (!Number.isFinite(minProbability) || minProbability < 0.5 || minProbability > 0.95) throw new Error('Umbral inválido');
   if (!MARKETS[market] || ![3, 4, 6].includes(legs)) throw new Error('Mercado o tamaño de ticket inválido');
   if (!Number.isInteger(maxTickets) || maxTickets < 1 || maxTickets > 4) throw new Error('Número de tickets inválido');
@@ -99,7 +99,7 @@ export function generateBatch(snapshot, { now = Date.now(), timeZone, minProbabi
     if (!(kickoff >= from && kickoff < until)) continue;
     window.push(f);
     // Respaldo over 1.5 (tickets escalonados): cada over 2.5 que falte se cambia por 2 over 1.5.
-    if (ticketThresholds && market === 'OVER_2_5' && !MARKET_BLOCKED.OVER_1_5.includes(f.league.id)) {
+    if (ticketThresholds && market === 'OVER_2_5' && !MARKET_BLOCKED.OVER_1_5.includes(f.league.id) && !blocked15.includes(f.league.id)) {
       const p15 = predictFixture(f, snapshot.history, { asOf: now, line: MARKETS.OVER_1_5.line });
       if (p15.eligible) {
         const { formFeatures, formLeagueGoals, analyzed, ...match } = f;

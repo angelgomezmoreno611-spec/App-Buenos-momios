@@ -137,6 +137,60 @@ export class SupabaseRepository {
     const rows = await this.request(`csv_matches?id=in.(${encodeURIComponent(list)})&status=eq.FINISHED&select=id,status,home_goals,away_goals`);
     return rows.map(r => ({ id: r.id, status: r.status, homeGoals: r.home_goals, awayGoals: r.away_goals }));
   }
+  // Football Charts: partidos de las ligas activas (job fc) y última sincronización.
+  async storeFcMatches(matches, before) {
+    const rows = matches.map(m => ({
+      id: m.id, league: m.league.id.replace(/^fc-/, ''), league_name: m.league.name, kickoff: m.kickoff,
+      home_id: m.home.id, home_name: m.home.name, away_id: m.away.id, away_name: m.away.name,
+      status: m.status, home_goals: m.homeGoals, away_goals: m.awayGoals, synced_at: new Date().toISOString()
+    }));
+    const upsert = { Prefer: 'resolution=merge-duplicates,return=minimal' };
+    for (let i = 0; i < rows.length; i += 500) {
+      await this.request('fc_matches?on_conflict=id', { method: 'POST', body: rows.slice(i, i + 500), headers: upsert });
+    }
+    if (before) await this.request(`fc_matches?kickoff=lt.${encodeURIComponent(new Date(before).toISOString())}`, { method: 'DELETE' });
+  }
+  #fcRow(r) {
+    return { id: r.id, league: { id: `fc-${r.league}`, name: r.league_name }, kickoff: new Date(r.kickoff).toISOString(),
+      status: r.status, home: { id: r.home_id, name: r.home_name }, away: { id: r.away_id, name: r.away_name },
+      homeGoals: r.home_goals, awayGoals: r.away_goals };
+  }
+  async fcMatches(since) {
+    const out = [], filter = `kickoff=gte.${encodeURIComponent(new Date(since).toISOString())}`;
+    for (let offset = 0; offset < 50_000; offset += 1000) {
+      const rows = await this.request(`fc_matches?${filter}&select=*&order=id.asc&limit=1000&offset=${offset}`);
+      out.push(...rows.map(r => this.#fcRow(r)));
+      if (rows.length < 1000) break;
+    }
+    return out;
+  }
+  // Resultado por id; si no coincide (fecha de calendario distinta), por equipos ±1 día.
+  async fcResults(ids) {
+    if (!ids.length) return [];
+    const list = ids.map(id => `"${id.replace(/["\\]/g, '')}"`).join(',');
+    const exact = (await this.request(`fc_matches?id=in.(${encodeURIComponent(list)})&status=eq.FINISHED&select=*`)).map(r => this.#fcRow(r));
+    const out = exact.map(m => ({ ...m, matchId: m.id }));
+    for (const id of ids.filter(id => !exact.some(m => m.id === id))) {
+      const pending = (await this.request(`fc_matches?id=eq.${encodeURIComponent(id)}&select=*`))[0];
+      if (!pending) continue;
+      const t = Date.parse(pending.kickoff), day = 86_400_000;
+      const near = await this.request(`fc_matches?status=eq.FINISHED&home_id=eq.${encodeURIComponent(pending.home_id)}` +
+        `&away_id=eq.${encodeURIComponent(pending.away_id)}&kickoff=gte.${encodeURIComponent(new Date(t - day).toISOString())}` +
+        `&kickoff=lte.${encodeURIComponent(new Date(t + day).toISOString())}&select=*&limit=1`);
+      if (near[0]) out.push({ ...this.#fcRow(near[0]), matchId: id });
+    }
+    return out;
+  }
+  async fcSyncTimes() {
+    const rows = await this.request('fc_sync?select=league,synced_at');
+    return new Map(rows.map(r => [r.league, Date.parse(r.synced_at)]));
+  }
+  async markFcSync(leagues) {
+    if (!leagues.length) return;
+    const now = new Date().toISOString();
+    await this.request('fc_sync?on_conflict=league', { method: 'POST', body: leagues.map(league => ({ league, synced_at: now })),
+      headers: { Prefer: 'resolution=merge-duplicates,return=minimal' } });
+  }
   // API-Football (plan gratuito): consultas gastadas por día y listas ya bajadas.
   async afUsage(day) {
     const rows = await this.request(`af_usage?day=eq.${day}&select=calls,lists_done`);

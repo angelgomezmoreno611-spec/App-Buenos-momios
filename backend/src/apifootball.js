@@ -8,6 +8,7 @@
 // Backtest del método (25 660 partidos, 30 ligas, 2022-2026, `bt-form.mjs`):
 // over 1.5 ≥0.85 → 2135 selecciones, 84.7%; over 2.5 ≥0.65 → 63.2%; over 3.5
 // ≥0.45 → 43.0%. En ligas de pocos goles rinde menos, por eso el umbral es más alto.
+import { FC_AF_IDS } from './footballcharts.js';
 const BASE = 'https://v3.football.api-sports.io';
 const HOUR = 3_600_000;
 export const FORM_MODEL_VERSION = 'form-af-v1';
@@ -18,7 +19,8 @@ export const FORM_MODEL_VERSION = 'form-af-v1';
 export const FORM_MIN = Object.freeze({ OVER_1_5: 0.79, OVER_2_5: 0.62, OVER_3_5: 0.45 });
 export const FORM_EVIDENCE = 'Forma reciente (API-Football) con promedios ajustados a la media de la liga: en backtest (15 201 partidos, 2023-2026) over 2.5 con 65% o más acertó el 65.0% y over 1.5 con 85% o más el 85.6%. La liga concreta no está validada.';
 // Ligas ya cubiertas por football-data.org, CSV u OpenLigaDB (ids de API-Football).
-export const COVERED_LEAGUES = new Set([39, 40, 140, 135, 78, 80, 61, 88, 94, 71, 103, 113, 169, 207, 203, 119, 253, 144, 262, 179, 183, 184, 244, 106, 197, 357, 79]);
+// Más las ligas de Football Charts (FC_AF_IDS): así un partido no entra dos veces.
+export const COVERED_LEAGUES = new Set([39, 40, 140, 135, 78, 80, 61, 88, 94, 71, 103, 113, 169, 207, 203, 119, 253, 144, 262, 179, 183, 184, 244, 106, 197, 357, 79, ...FC_AF_IDS]);
 // Ligas medidas con mal acierto en ambos mercados con el modelo de forma
 // (npm run backtest:form -- --summary, 2021-07 a 2026-11): discover no gasta
 // consultas en ellas. Ligue 2, Serie B, Championship (Escocia), LaLiga 2, Liga I,
@@ -140,7 +142,7 @@ export function formPredict(fixture, rawFeatures, { line = 1.5, asOf = Date.now(
 // pausa de la liga de más de 45 días. Devuelve null si no hay muestra suficiente.
 export function featuresFromHistory(match, finished, { minPlayed = FORM_SHRINK.minPlayed } = {}) {
   const t = Date.parse(match.kickoff), DAY = 86_400_000;
-  const league = finished.filter(r => r.league.afId === match.league.afId && r.status === 'FINISHED'
+  const league = finished.filter(r => r.league.id === match.league.id && r.status === 'FINISHED'
       && Number.isInteger(r.homeGoals) && Number.isInteger(r.awayGoals) && Date.parse(r.kickoff) < t - 2 * HOUR)
     .sort((a, b) => Date.parse(a.kickoff) - Date.parse(b.kickoff));
   let start = 0;

@@ -17,7 +17,8 @@
     "calibrate": "node --max-old-space-size=512 scripts/calibrate.js",
     "tune": "node --max-old-space-size=512 scripts/tune.js",
     "backtest:form": "node --max-old-space-size=512 scripts/backtest-form.js",
-    "import:csv": "node --max-old-space-size=512 scripts/import-csv.js"
+    "import:csv": "node --max-old-space-size=512 scripts/import-csv.js",
+    "import:fc": "node --max-old-space-size=512 --env-file-if-exists=.env scripts/import-footballcharts.js"
   },
   "devDependencies": {
     "@electric-sql/pglite": "^0.5.15"

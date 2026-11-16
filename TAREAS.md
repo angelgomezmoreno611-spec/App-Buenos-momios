@@ -9,6 +9,8 @@ Estados: ⏳ pendiente · 🔧 en proceso · ✅ hecho · ⏸️ en espera.
 | 2 | Ligas validadas en over 1.5 como respaldo (solo over 1.5) | ✅ hecho y subido | 10 ligas solo de respaldo: Bélgica, Liga MX, Escocia (3), Finlandia, Polonia, Grecia, Irlanda y 3. Liga. Prueba: nunca entran como over 2.5. 76/76. Los CSV nuevos se descargan en el próximo job `csv` (martes o viernes). |
 | 3 | Forma calculada por nosotros con resultados guardados de API-Football | ✅ hecho y subido · ⏳ juntando historial | `featuresFromHistory`: mismos datos que el backtest (temporada casa/fuera + últimos 5), sin consultas. generate la usa en partidos sin análisis; discover no gasta cuota en ellos. Hoy: 0 de 88 partidos (solo 63 resultados guardados). Empieza a rendir cuando cada equipo tenga 5 partidos guardados (~5-6 semanas). 79/79. |
 | 5 | Re-validar las 9 ligas CSV sin usar con el criterio nuevo (0.62 / respaldo 0.79) | ✅ hecho y subido | 24 438 partidos descargados una vez. Over 2.5: ninguna pasa (todas <62%) → bloqueadas también por API-Football (antes entraban sin validar). Over 1.5: 2. Bundesliga pasa (80.3%) → respaldo por CSV, sin cuota; Austria (80.1%) → respaldo por API-Football. Las otras 7 ya no gastan consultas en discover. 80/80. |
+| 6 | Football Charts como fuente (98 ligas, 200 consultas/día gratis, uso personal con atribución) | ⏸️ código listo, esperando permiso | Backtest de 58 ligas (24 146 partidos): 22 pasan. Hecho: módulo, migraciones 013 (`fc_matches`) y 014 (cron 2 veces/día), job `fc`, generate/settle, sin duplicados con API-Football, 86/86 pruebas. Falta (necesita permiso): clave en Vercel, aplicar 013/014, subir código y correr el job. |
+| 7 | Resultados internacionales (CC0) para validar partidos de selecciones | ⏳ pendiente | Para fechas FIFA como esta semana. |
 | 4 | Plan de pago de API-Football | ⏸️ en espera | Solo si 1-3 no alcanzan. Revisar precio antes. |
 
 ## Bitácora
@@ -19,3 +21,5 @@ Estados: ⏳ pendiente · 🔧 en proceso · ✅ hecho · ⏸️ en espera.
 - 2026-11-16: tarea 3 terminada y subida. Revisar a partir del 2026-12-07 cuántos partidos ya tienen forma propia; con eso decidir la tarea 4.
 - 2026-11-16: corrección: las ligas de API-Football ya se usan todas; lo que suma es pasar ligas a CSV (sin cuota). Empezando la tarea 5: descarga única del historial para backtest.
 - 2026-11-16: tarea 5 terminada. Resultado: +1 liga de respaldo gratis (2. Bundesliga), menos partidos malos en over 2.5 y más cuota libre para otras ligas.
+- 2026-11-16: tarea 6: clave de Football Charts recibida (200/día confirmada). Descargadas 2 temporadas de 58 ligas (116 consultas) y medidas: pasan 22. Conectándola a producción.
+- 2026-11-16: tarea 6 programada y probada. El sistema pidió permiso para agregar la clave a Vercel; en espera de la confirmación del usuario.

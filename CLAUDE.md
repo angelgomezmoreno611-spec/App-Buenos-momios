@@ -121,6 +121,12 @@ vuelve a la ventana de 72 h; la demo usa 72 h).
   partido no tiene análisis, generate calcula la forma con los resultados guardados
   (`featuresFromHistory`) y discover no gasta consulta en él; discover solo analiza
   partidos del día de la próxima tanda. IDs `af-`. `AF_DISCOVERY=false` lo apaga. Uso diario en `af_usage`.
+- `src/footballcharts.js`: Football Charts (clave gratis `FOOTBALL_CHARTS_KEY`, 200/día,
+  uso personal con atribución). Job `fc` (migración 014, 2 veces al día, ≤10 ligas por
+  vuelta, tabla `fc_matches` de la 013); generate calcula la forma con sus resultados
+  (`featuresFromHistory`) y respeta `FC_VALIDATION` por mercado; settle lee la tabla
+  (por id o por equipos ±1 día). Sus ligas cuentan como cubiertas para API-Football
+  (sin duplicados). IDs `fc-`. `FC_COMPETITIONS` (`none` desactiva).
 - `src/football/`: módulo independiente de información de partidos con ocho
   adaptadores (`providers.js`), normalizador común, transporte HTTP secuencial con
   límite de 2 MB por respuesta (`http.js`, compartido con `FootballData` para

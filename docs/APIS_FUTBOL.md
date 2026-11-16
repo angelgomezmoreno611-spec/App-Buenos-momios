@@ -4,7 +4,7 @@ Investigación: **6 de noviembre de 2026**. Se implementaron ocho conectores par
 la pestaña **Partidos**. Los planes y la cobertura pueden cambiar; se enlazan las
 fuentes oficiales. Preparar un conector no concede acceso al servicio.
 
-## Comparación de 14 fuentes
+## Comparación de 17 fuentes
 
 | Fuente | Plan gratuito y límites | Estado |
 | --- | --- | --- |
@@ -20,6 +20,9 @@ fuentes oficiales. Preparar un conector no concede acceso al servicio.
 | [ScoreBat](https://www.scorebat.com/video-api/docs/) | `free-feed` con token: hasta 50 videos de encuentros de al menos siete días | Investigada; no añade estadísticas actuales, sin integrar |
 | [StatsBomb / Hudl Open Data](https://github.com/hudl/open-data) | Archivos de competiciones seleccionadas para análisis histórico | Investigada; sin descargas masivas ni incorporación al modelo |
 | [Football-Data.co.uk](https://football-data.co.uk/contact.php) | CSV solo para uso personal/académico (no comercial); automatización ligera hasta dos veces por semana | Integrada en `src/csvleagues.js`: job `/api/jobs/csv` martes y viernes, con tope de 2 descargas en 7 días registrado en `csv_sync_runs`. Si la app pasa a uso comercial, desactivar (`CSV_COMPETITIONS=none`) |
+| [Football Charts](https://www.football-charts.com/developers) | Clave gratis: 200 consultas/día, 60/min; 98 ligas, temporada actual y anterior (resultados, próximos, tablas). Uso personal con atribución; app usada por otras personas → plan comercial | Integrada en `src/footballcharts.js`: job `/api/jobs/fc` (2 veces al día) guarda en `fc_matches`; 22 ligas validadas por backtest (15 en over 2.5, 19 en over 1.5) |
+| [Resultados internacionales (martj42)](https://github.com/martj42/international_results) | CSV CC0 sin clave: ~49 000 partidos de selecciones desde 1872 | Investigada; pendiente para validar partidos de selecciones |
+| [OpenFoot](https://openfootapi.com) | 5000 consultas/mes, 120 competiciones (calendario, marcadores, tablas); beta, uso comercial solo en plan Pro | Investigada; sin integrar |
 | [Open-Meteo](https://open-meteo.com/en/pricing) | Clima sin clave para uso no comercial, hasta 10 000 consultas/día y atribución | Investigada; pendiente de coordenadas verificadas de estadios |
 | [TheSports](https://www.thesports.com/pricing) | Prueba de 15 días; no se confirmó plan permanente gratis | Investigada; no activada como fuente gratuita permanente |
 

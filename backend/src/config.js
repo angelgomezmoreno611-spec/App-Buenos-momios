@@ -7,6 +7,7 @@ import { FootballService } from './football/service.js';
 import { CSV_LEAGUES, defaultCsvLeagues } from './csvleagues.js';
 import { MARKETS } from './tickets.js';
 import { OLDB_LEAGUES, defaultOldbLeagues } from './openliga.js';
+import { FC_LEAGUES, FC_BASE } from './footballcharts.js';
 import { EVIDENCE } from './model.js';
 
 export function configuredApp(env = process.env) {
@@ -45,6 +46,20 @@ export function configuredApp(env = process.env) {
   if (oldbLeagues.some(code => !OLDB_LEAGUES[code])) throw new Error('OPENLIGADB_COMPETITIONS contiene una liga no compatible');
   const openLiga = { leagues: oldbLeagues, get: url => footballHttp.get('openligadb', url) };
   const backupOnly = [...backupOf(defaultCsvLeagues), ...backupOf(defaultOldbLeagues)].filter(c => csvLeagues.includes(c) || oldbLeagues.includes(c));
+  // Football Charts (clave gratis, uso personal con atribución): FC_COMPETITIONS cambia las
+  // ligas ("none" desactiva). Ritmo: ≤55 consultas/min (su límite es 60).
+  const fcLeagues = !env.FOOTBALL_CHARTS_KEY?.trim() || env.FC_COMPETITIONS?.trim() === 'none' ? []
+    : env.FC_COMPETITIONS ? env.FC_COMPETITIONS.split(',').map(x => x.trim()).filter(Boolean) : Object.keys(FC_LEAGUES);
+  if (fcLeagues.some(l => !FC_LEAGUES[l])) throw new Error('FC_COMPETITIONS contiene una liga no compatible');
+  let fcLast = 0;
+  const fc = fcLeagues.length ? { key: env.FOOTBALL_CHARTS_KEY.trim(), leagues: fcLeagues, perRun: 10, get: async path => {
+    const wait = fcLast + 1100 - Date.now();
+    if (wait > 0) await new Promise(resolve => setTimeout(resolve, wait));
+    fcLast = Date.now();
+    const response = await fetch(`${FC_BASE}${path}`, { headers: { Authorization: `Bearer ${env.FOOTBALL_CHARTS_KEY.trim()}` }, signal: AbortSignal.timeout(15_000) });
+    if (!response.ok) throw new Error(`Football Charts: HTTP ${response.status}`);
+    return response.json();
+  } } : null;
   // Un proveedor por instancia de la API, creado solo cuando un job lo necesita.
   // Auth, historial y lectura de tickets funcionan sin token de fútbol.
   let football;
@@ -55,7 +70,7 @@ export function configuredApp(env = process.env) {
     return football ??= new FootballData({ token: env.FOOTBALL_DATA_TOKEN.trim(), competitions: env.FOOTBALL_COMPETITIONS,
       fetcher: async (url, options) => Response.json(await footballHttp.get('football-data', url, options.headers)) });
   };
-  return createApp({ ...common, csvLeagues, openLiga, market, legs, minProbability, ticketThresholds, backupOnly,
+  return createApp({ ...common, csvLeagues, openLiga, market, legs, minProbability, ticketThresholds, backupOnly, fc,
     maxTickets: ticketThresholds?.length ?? maxTickets,
     // Ticket "La soñadora" (6 over 2.5): TICKET_DREAMER=false lo apaga.
     dreamer: env.TICKET_DREAMER?.trim() !== 'false',
