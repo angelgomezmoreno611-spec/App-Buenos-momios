@@ -24,7 +24,13 @@ export function configuredApp(env = process.env) {
   const maxTickets = Number(env.TICKET_COUNT ?? 3);
   if (!MARKETS[market] || ![3, 4, 6].includes(legs)) throw new Error('TICKET_MARKET o TICKET_LEGS inválidos');
   if (!Number.isInteger(maxTickets) || maxTickets < 1 || maxTickets > 4) throw new Error('TICKET_COUNT debe estar entre 1 y 4');
-  const minProbability = Number(env.MIN_PROBABILITY ?? (market === 'OVER_1_5' ? 0.8 : 0.65));
+  // Over 2.5: tickets escalonados, umbral por ticket (TICKET_THRESHOLDS="0.65,0.63,0.62").
+  const thresholdList = env.TICKET_THRESHOLDS?.trim() || (market === 'OVER_2_5' && !env.MIN_PROBABILITY ? '0.65,0.63,0.62' : '');
+  const ticketThresholds = thresholdList ? thresholdList.split(',').map(Number) : null;
+  if (ticketThresholds && (ticketThresholds.length < 1 || ticketThresholds.length > 4 || ticketThresholds.some(t => !(t >= 0.5 && t <= 0.95)))) {
+    throw new Error('TICKET_THRESHOLDS debe tener de 1 a 4 umbrales entre 0.5 y 0.95');
+  }
+  const minProbability = ticketThresholds?.[0] ?? Number(env.MIN_PROBABILITY ?? (market === 'OVER_1_5' ? 0.8 : 0.65));
   // Ligas de football-data.co.uk (CSV): "none" las desactiva.
   const csvLeagues = env.CSV_COMPETITIONS === undefined ? defaultCsvLeagues(market)
     : env.CSV_COMPETITIONS.trim() === 'none' ? [] : [...new Set(env.CSV_COMPETITIONS.split(',').map(x => x.trim()).filter(Boolean))];
@@ -44,7 +50,8 @@ export function configuredApp(env = process.env) {
     return football ??= new FootballData({ token: env.FOOTBALL_DATA_TOKEN.trim(), competitions: env.FOOTBALL_COMPETITIONS,
       fetcher: async (url, options) => Response.json(await footballHttp.get('football-data', url, options.headers)) });
   };
-  return createApp({ ...common, csvLeagues, openLiga, market, legs, maxTickets, minProbability,
+  return createApp({ ...common, csvLeagues, openLiga, market, legs, minProbability, ticketThresholds,
+    maxTickets: ticketThresholds?.length ?? maxTickets,
     // Ticket "La soñadora" (6 over 2.5): TICKET_DREAMER=false lo apaga.
     dreamer: env.TICKET_DREAMER?.trim() !== 'false',
     // Solo partidos del día de la tanda (hora local); TICKET_SAME_DAY=false vuelve a 72 h.

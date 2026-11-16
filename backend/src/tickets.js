@@ -36,10 +36,10 @@ export const MARKETS = Object.freeze({ OVER_1_5: { line: 1.5, goals: 2 }, OVER_2
 // Ligas medidas con mal acierto en ese mercado (backtest): no entran en tickets.
 export const MARKET_BLOCKED = Object.freeze({ OVER_1_5: ['PD', 'SA'], OVER_2_5: [], OVER_3_5: [] });
 // "La soñadora": un ticket largo de 6 over 2.5 con los partidos que no usan los
-// tickets normales (que siguen en 0.65). Mínimo 0.62 por selección, también en
-// partidos de API-Football (backtest:form, método encogido: 0.62 → 62.0% en
-// validación y 64.9% en prueba). Ticket completo ≈ 0.63^6 ≈ 6% (1 de cada 16).
-export const DREAMER = Object.freeze({ name: 'La soñadora', market: 'OVER_2_5', picks: 6, min: 0.62 });
+// tickets normales. Mínimo 0.60 por selección, también en partidos de
+// API-Football (backtest principal: ≥0.60 acertó 62.8% en 1956 sel.; backtest:form
+// encogido: 60.6% validación / 63.9% prueba). Ticket ≈ 0.6^6 ≈ 5% (1 de cada 21).
+export const DREAMER = Object.freeze({ name: 'La soñadora', market: 'OVER_2_5', picks: 6, min: 0.6 });
 
 export function dreamerTicket(fixtures, history, { now, usedIds, number }) {
   const used = new Set(usedIds), { market, picks, min, name } = DREAMER, line = MARKETS[market].line;
@@ -56,10 +56,16 @@ export function dreamerTicket(fixtures, history, { now, usedIds, number }) {
 }
 
 export function generateBatch(snapshot, { now = Date.now(), timeZone, minProbability = 0.65, mode = 'live', excludedIds = [],
-  market = 'OVER_2_5', legs = 3, evidence = null, maxTickets = 4, dreamer = false, day = null, sameDay = false } = {}) {
+  market = 'OVER_2_5', legs = 3, evidence = null, maxTickets = 4, dreamer = false, day = null, sameDay = false, ticketThresholds = null } = {}) {
   if (!Number.isFinite(minProbability) || minProbability < 0.5 || minProbability > 0.95) throw new Error('Umbral inválido');
   if (!MARKETS[market] || ![3, 4, 6].includes(legs)) throw new Error('Mercado o tamaño de ticket inválido');
   if (!Number.isInteger(maxTickets) || maxTickets < 1 || maxTickets > 4) throw new Error('Número de tickets inválido');
+  // Umbral por ticket (escalonado: el 01 es el más exigente). Sin lista, todos usan minProbability.
+  const tiers = ticketThresholds ?? Array(maxTickets).fill(minProbability);
+  if (!Array.isArray(tiers) || tiers.length < 1 || tiers.length > 4 || tiers.some(t => !Number.isFinite(t) || t < 0.5 || t > 0.95)) {
+    throw new Error('Umbrales por ticket inválidos');
+  }
+  const floor = Math.min(...tiers);
   const { line } = MARKETS[market];
   const age = now - Date.parse(snapshot.fetchedAt);
   if (!Number.isFinite(age) || age < -60_000 || age > 6 * 3_600_000) throw new Error('Datos desactualizados');
@@ -79,7 +85,7 @@ export function generateBatch(snapshot, { now = Date.now(), timeZone, minProbabi
       continue;
     }
     const prediction = predictFixture(f, snapshot.history, { asOf: now, line });
-    if (!prediction.eligible || prediction.probability < minFor(f, market, minProbability)) {
+    if (!prediction.eligible || prediction.probability < minFor(f, market, floor)) {
       rejections.push({ matchId: f.id, reason: prediction.reason ?? 'Probabilidad inferior al umbral' });
       continue;
     }
@@ -87,16 +93,32 @@ export function generateBatch(snapshot, { now = Date.now(), timeZone, minProbabi
     candidates.push({ match, prediction, market, result: 'pending', score: null });
   }
   candidates.sort((a, b) => b.prediction.probability - a.prediction.probability || a.match.id.localeCompare(b.match.id));
-  const count = Math.min(maxTickets, Math.floor(candidates.length / legs));
-  const tickets = Array.from({ length: count }, (_, i) => ({
-    id: randomUUID(), number: i + 1, status: 'pending', selections: [], probability: 1
-  }));
-  // Distribuye el riesgo entre los tickets sin reutilizar partidos.
-  for (const pick of candidates.slice(0, count * legs)) {
-    const ticket = tickets.filter(t => t.selections.length < legs)
-      .sort((a, b) => b.probability - a.probability || a.number - b.number)[0];
-    ticket.selections.push(pick);
-    ticket.probability *= pick.prediction.probability;
+  let tickets;
+  if (ticketThresholds) {
+    // Escalonado: cada ticket toma los mejores partidos libres si todos llegan a su
+    // umbral; si no, esos partidos pasan al siguiente nivel (umbral menor).
+    tickets = [];
+    let pool = candidates;
+    for (const threshold of tiers) {
+      const take = pool.slice(0, legs);
+      if (take.length < legs) break;
+      if (take.at(-1).prediction.probability < threshold || take.some(x => x.prediction.probability < minFor(x.match, market, threshold))) continue;
+      pool = pool.slice(legs);
+      tickets.push({ id: randomUUID(), number: tickets.length + 1, status: 'pending', threshold, selections: take,
+        probability: take.reduce((p, x) => p * x.prediction.probability, 1) });
+    }
+  } else {
+    const count = Math.min(maxTickets, Math.floor(candidates.length / legs));
+    tickets = Array.from({ length: count }, (_, i) => ({
+      id: randomUUID(), number: i + 1, status: 'pending', selections: [], probability: 1
+    }));
+    // Distribuye el riesgo entre los tickets sin reutilizar partidos.
+    for (const pick of candidates.slice(0, count * legs)) {
+      const ticket = tickets.filter(t => t.selections.length < legs)
+        .sort((a, b) => b.probability - a.probability || a.number - b.number)[0];
+      ticket.selections.push(pick);
+      ticket.probability *= pick.prediction.probability;
+    }
   }
   // La soñadora (opcional), con partidos que no usaron los tickets normales.
   const extra = dreamer ? dreamerTicket(window, snapshot.history, {
@@ -104,11 +126,12 @@ export function generateBatch(snapshot, { now = Date.now(), timeZone, minProbabi
   return {
     id: randomUUID(), day: batchDate, mode, sameDay,
     createdAt: new Date(now).toISOString(), sourceUpdatedAt: snapshot.fetchedAt,
-    source: snapshot.source, modelVersion: MODEL_VERSION, minProbability, market, line, legs, maxTickets,
+    source: snapshot.source, modelVersion: MODEL_VERSION, minProbability, market, line, legs, maxTickets: tiers.length,
+    ...(ticketThresholds ? { ticketThresholds: tiers } : {}),
     // La evidencia solo describe al modelo con el mismo mercado y umbral con que se midió.
     ...(evidence && evidence.threshold === minProbability && evidence.market === market ? { evidence }
       : market === 'OVER_2_5' && minProbability === MODEL_EVIDENCE.threshold ? { evidence: MODEL_EVIDENCE } : {}),
-    tickets: extra ? [...tickets, extra] : tickets, eligibleMatches: candidates.length, missingMatches: Math.max(0, maxTickets * legs - candidates.length),
+    tickets: extra ? [...tickets, extra] : tickets, eligibleMatches: candidates.length, missingMatches: Math.max(0, tiers.length * legs - candidates.length),
     rejections, warnings: [
       ...(snapshot.warnings ?? []),
       ...(mode === 'demo' ? ['DEMOSTRACIÓN: equipos, resultados y probabilidades sintéticos.'] : []),

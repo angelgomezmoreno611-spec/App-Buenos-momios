@@ -687,3 +687,13 @@ No se dejaron servidores activos ni se desplegó el proyecto.
   había guardado): eebe1bd1…, 1 ticket de 3 (30.4%): Dinaz Vyshhorod-Bratslav,
   Guadalupe-Bermudas, Guyana-Puerto Rico. 3 elegibles, faltan 6, sin soñadora
   (fecha FIFA). El primer intento chocó con el lock de settle (:20); reintento OK.
+- 2026-11-16: idea del usuario: tickets escalonados. Ticket 01 ≥0.65, 02 ≥0.63,
+  03 ≥0.62 por partido; La soñadora ≥0.60. Backtest del modelo principal (8 776
+  partidos openfootball; `npm run backtest` ahora da `byThreshold`): ≥0.65 767
+  sel. 64.9%; ≥0.63 1200/64.3%; ≥0.62 1442/63.9%; ≥0.60 1956/62.8%.
+  Implementado: `ticketThresholds` en generateBatch (cada ticket toma los 3
+  mejores libres si todos llegan a su umbral; si no, bajan al siguiente nivel;
+  numeración consecutiva y `threshold` en cada ticket), TICKET_THRESHOLDS
+  (por defecto 0.65,0.63,0.62 en over 2.5), FORM_MIN over 2.5 = 0.62,
+  DREAMER.min = 0.60. App: "cada partido ≥ X%" en la tarjeta. 72/72 backend,
+  18/18 Flutter. PENDIENTE: APK v3 (con Brave cerrado).

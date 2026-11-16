@@ -133,8 +133,8 @@ test('La soñadora: 6 over 2.5 sin repetir partidos de los normales', async () =
   assert.equal(dreamerTicket(snapshot.fixtures.slice(0, 5), snapshot.history, { now, usedIds: [], number: 1 }), null);
   assert.equal(generateBatch(snapshot, { now, minProbability: 0.5, maxTickets: 1 }).tickets.some(t => t.kind === 'dreamer'), false);
   assert.throws(() => generateBatch(snapshot, { now, maxTickets: 5 }), /Número de tickets/);
-  // Normales en 0.65; La soñadora acepta desde 0.62, también con el modelo de forma (FORM_MIN 0.65).
-  assert.equal(DREAMER.min, 0.62);
+  // Normales en 0.65; La soñadora acepta desde DREAMER.min (0.60), también con el modelo de forma.
+  assert.ok(DREAMER.min < 0.62);
   const form = (id, goals) => ({ id: `af-${id}`, league: { id: 'af-9', name: 'Liga X' }, home: { id: `h${id}`, name: `H${id}` }, away: { id: `a${id}`, name: `A${id}` },
     kickoff: new Date(now + 5 * 3_600_000).toISOString(), status: 'TIMED',
     formFeatures: { homePlayed: 8, awayPlayed: 8, homeFor: goals / 2, homeAgainst: goals / 2, awayFor: goals / 2, awayAgainst: goals / 2,
@@ -172,4 +172,36 @@ test('sameDay: solo partidos del día de la tanda en hora de Mazatlán', async (
   // Solo x-1 (01:00 del 16) y x-2 (23:59 del 16) entran a la ventana: elegibles o rechazados.
   assert.equal(lb.eligibleMatches + lb.rejections.length, 2);
   assert.ok(lb.rejections.every(r => ['x-1', 'x-2'].includes(r.matchId)));
+});
+test('tickets escalonados: 0.65 / 0.63 / 0.62 y La soñadora desde 0.60', async () => {
+  const { DREAMER } = await import('../src/tickets.js');
+  const { formPredict } = await import('../src/apifootball.js');
+  assert.equal(DREAMER.min, 0.6);
+  const now = Date.parse('2026-11-05T17:00:00Z'), base = demoSnapshot(now);
+  const kick = new Date(now + 5 * 3_600_000).toISOString();
+  const form = (id, g) => ({ id: `af-${id}`, league: { id: 'af-9', name: 'Liga X' }, home: { id: `h${id}`, name: `H${id}` },
+    away: { id: `a${id}`, name: `A${id}` }, kickoff: kick, status: 'TIMED',
+    formFeatures: { homePlayed: 8, awayPlayed: 8, homeFor: g / 2, homeAgainst: g / 2, awayFor: g / 2, awayAgainst: g / 2,
+      homeLast5For: g / 2, homeLast5Against: g / 2, awayLast5For: g / 2, awayLast5Against: g / 2 } });
+  const prob = g => formPredict(form(0, g), form(0, g).formFeatures, { line: 2.5, asOf: now }).probability;
+  // Goles esperados que caen en cada franja de probabilidad.
+  const grid = Array.from({ length: 200 }, (_, i) => 2.8 + i * 0.01);
+  const pick = (lo, hi) => grid.find(g => prob(g) >= lo && prob(g) < hi);
+  const bands = { a: pick(0.66, 0.7), b: pick(0.635, 0.645), c: pick(0.622, 0.628), d: pick(0.6, 0.61) };
+  assert.ok(Object.values(bands).every(Boolean));
+  let n = 0;
+  const make = (g, k) => Array.from({ length: k }, () => form(n++, g));
+  const snapshot = { ...base, fixtures: [...make(bands.a, 3), ...make(bands.b, 3), ...make(bands.c, 3), ...make(bands.d, 6)] };
+  const batch = generateBatch(snapshot, { now, minProbability: 0.65, legs: 3, dreamer: true, ticketThresholds: [0.65, 0.63, 0.62] });
+  const normal = batch.tickets.filter(t => t.kind !== 'dreamer'), dreamer = batch.tickets.find(t => t.kind === 'dreamer');
+  assert.deepEqual(normal.map(t => t.threshold), [0.65, 0.63, 0.62]);
+  normal.forEach(t => assert.ok(t.selections.every(s => s.prediction.probability >= t.threshold)));
+  assert.ok(normal[0].probability > normal[1].probability && normal[1].probability > normal[2].probability);
+  assert.ok(dreamer && dreamer.selections.every(s => s.prediction.probability >= 0.6 && s.prediction.probability < 0.62));
+  assert.deepEqual(batch.ticketThresholds, [0.65, 0.63, 0.62]);
+  // Sin partidos de 0.65, el primer nivel se salta y los demás se forman (numerados 1, 2).
+  const low = generateBatch({ ...base, fixtures: [...make(bands.b, 3), ...make(bands.c, 3)] },
+    { now, minProbability: 0.65, legs: 3, ticketThresholds: [0.65, 0.63, 0.62] });
+  assert.deepEqual(low.tickets.map(t => [t.number, t.threshold]), [[1, 0.63], [2, 0.62]]);
+  assert.throws(() => generateBatch(snapshot, { now, ticketThresholds: [0.4] }), /Umbrales por ticket/);
 });

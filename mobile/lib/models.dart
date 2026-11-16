@@ -70,6 +70,8 @@ class Ticket {
       .map((p) => Pick(Map<String, dynamic>.from(p as Map)))
       .toList();
   int get legs => (data['selections'] as List).length;
+  // Umbral mínimo por partido de este ticket (tandas escalonadas); null en antiguas.
+  double? get threshold => (data['threshold'] as num?)?.toDouble();
   String get kind => data['kind'] as String? ?? 'regular';
   bool get isRisky => kind == 'risky';
   bool get isDreamer => kind == 'dreamer';
@@ -99,15 +101,15 @@ class Pick {
   String? get score => data['score'] as String?;
   String get market => data['market'] as String? ?? 'OVER_2_5';
   String get lineLabel => switch (market) {
-        'OVER_1_5' => '1.5',
-        'OVER_3_5' => '3.5',
-        _ => '2.5',
-      };
+    'OVER_1_5' => '1.5',
+    'OVER_3_5' => '3.5',
+    _ => '2.5',
+  };
   int get goalsNeeded => switch (market) {
-        'OVER_1_5' => 2,
-        'OVER_3_5' => 4,
-        _ => 3,
-      };
+    'OVER_1_5' => 2,
+    'OVER_3_5' => 4,
+    _ => 3,
+  };
   double get probability => (prediction['probability'] as num).toDouble();
   List<String> get reasons => List<String>.from(prediction['reasons'] as List);
 }

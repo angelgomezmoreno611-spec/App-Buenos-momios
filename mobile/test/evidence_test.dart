@@ -84,7 +84,10 @@ void main() {
     });
     expect(batch.regularTickets.length, 1);
     final risky = batch.specialTicket!;
-    expect([risky.title, risky.lineLabel, risky.legs], ['El arriesgado del día', 'mixto', 4]);
+    expect(
+      [risky.title, risky.lineLabel, risky.legs],
+      ['El arriesgado del día', 'mixto', 4],
+    );
     expect(risky.picks.map((p) => p.goalsNeeded).toList(), [4, 4, 3, 3]);
     expect(batch.regularTickets.first.title, 'Ticket 01');
     expect([batch.maxTickets, batch.uniqueMatches], [4, 10]);
@@ -121,8 +124,38 @@ void main() {
     });
     final dreamer = batch.specialTicket!;
     expect(batch.regularTickets.length, 3);
-    expect([dreamer.isDreamer, dreamer.isRisky, dreamer.title, dreamer.lineLabel, dreamer.legs],
-        [true, false, 'La soñadora', '2.5', 6]);
+    expect(
+      [
+        dreamer.isDreamer,
+        dreamer.isRisky,
+        dreamer.title,
+        dreamer.lineLabel,
+        dreamer.legs,
+      ],
+      [true, false, 'La soñadora', '2.5', 6],
+    );
     expect([batch.maxTickets, batch.uniqueMatches], [3, 18]);
+  });
+
+  test('el ticket escalonado expone su umbral; los antiguos no', () {
+    final t = Ticket({
+      'id': 'x',
+      'number': 2,
+      'status': 'pending',
+      'probability': 0.25,
+      'threshold': 0.63,
+      'selections': <Map<String, dynamic>>[],
+    });
+    expect(t.threshold, 0.63);
+    expect(
+      Ticket({
+        'id': 'y',
+        'number': 1,
+        'status': 'pending',
+        'probability': 0.3,
+        'selections': <Map<String, dynamic>>[],
+      }).threshold,
+      isNull,
+    );
   });
 }

@@ -947,7 +947,14 @@ class TicketCard extends StatelessWidget {
             ),
             const SizedBox(height: 12),
             Text(
-              'ID ${ticket.id.substring(0, 8)} · ${ticket.legs} selecciones',
+              [
+                'ID ${ticket.id.substring(0, 8)}',
+                '${ticket.legs} selecciones',
+                if (ticket.threshold != null)
+                  'cada partido ≥ ${percent(ticket.threshold!)}'
+                else if (ticket.isDreamer)
+                  'cada partido ≥ 60%',
+              ].join(' · '),
               style: const TextStyle(
                 color: muted,
                 fontSize: 11,
