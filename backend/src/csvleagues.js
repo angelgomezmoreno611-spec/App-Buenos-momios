@@ -145,7 +145,9 @@ export const CSV_VALIDATION = {
     FIN: { picks: 206, hitRate: 0.801 }, SC2: { picks: 171, hitRate: 0.813 },
     SC3: { picks: 141, hitRate: 0.837 }, POL: { picks: 131, hitRate: 0.847 },
     // Mismo acierto mínimo pero con menos selecciones medidas (40-99).
-    G1: { picks: 77, hitRate: 0.896 }, IRL: { picks: 43, hitRate: 0.837 }
+    G1: { picks: 77, hitRate: 0.896 }, IRL: { picks: 43, hitRate: 0.837 },
+    // Re-validada 2026-11-16 (criterio del respaldo: ≥0.79, 2021-07 a 2026-11): 80.3%.
+    D2: { picks: 543, hitRate: 0.803 }
   }
 };
 export const defaultCsvLeagues = market => Object.keys(CSV_VALIDATION[market] ?? {});

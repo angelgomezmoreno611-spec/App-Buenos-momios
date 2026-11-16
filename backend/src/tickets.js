@@ -34,7 +34,12 @@ export const batchDay = (now = Date.now(), timeZone) => dayKey(now + GENERATE_AH
 // Mercados soportados: línea de goles y mínimo de goles para acertar.
 export const MARKETS = Object.freeze({ OVER_1_5: { line: 1.5, goals: 2 }, OVER_2_5: { line: 2.5, goals: 3 }, OVER_3_5: { line: 3.5, goals: 4 } });
 // Ligas medidas con mal acierto en ese mercado (backtest): no entran en tickets.
-export const MARKET_BLOCKED = Object.freeze({ OVER_1_5: ['PD', 'SA'], OVER_2_5: [], OVER_3_5: [] });
+// Ligas de API-Football (af-<id>) re-validadas el 2026-11-16 con el modelo de forma:
+// en over 2.5 ≥0.62 todas aciertan <62% (2. Bundesliga 60.9%, Austria 58.6%, el resto
+// 25-50%); en over 1.5 ≥0.79 solo pasan 2. Bundesliga (ahora por CSV) y Austria.
+const AF_BAD_OVER_2_5 = ['af-79', 'af-62', 'af-136', 'af-180', 'af-141', 'af-218', 'af-283', 'af-98', 'af-128'];
+const AF_BAD_OVER_1_5 = ['af-62', 'af-136', 'af-180', 'af-141', 'af-283', 'af-98', 'af-128'];
+export const MARKET_BLOCKED = Object.freeze({ OVER_1_5: ['PD', 'SA', ...AF_BAD_OVER_1_5], OVER_2_5: AF_BAD_OVER_2_5, OVER_3_5: [] });
 // "La soñadora": un ticket largo de 6 over 2.5 con los partidos que no usan los
 // tickets normales. Mínimo 0.60 por selección, también en partidos de
 // API-Football (backtest principal: ≥0.60 acertó 62.8% en 1956 sel.; backtest:form

@@ -8,6 +8,7 @@ Estados: ⏳ pendiente · 🔧 en proceso · ✅ hecho · ⏸️ en espera.
 | 1 | `discover` analiza solo partidos del día de la próxima tanda | ✅ hecho y subido | Antes repartía ~82 análisis/día entre varios días. Ahora: de 19:00 en adelante analiza solo los de mañana (hora de Mazatlán). Prueba nueva, 75/75. |
 | 2 | Ligas validadas en over 1.5 como respaldo (solo over 1.5) | ✅ hecho y subido | 10 ligas solo de respaldo: Bélgica, Liga MX, Escocia (3), Finlandia, Polonia, Grecia, Irlanda y 3. Liga. Prueba: nunca entran como over 2.5. 76/76. Los CSV nuevos se descargan en el próximo job `csv` (martes o viernes). |
 | 3 | Forma calculada por nosotros con resultados guardados de API-Football | ✅ hecho y subido · ⏳ juntando historial | `featuresFromHistory`: mismos datos que el backtest (temporada casa/fuera + últimos 5), sin consultas. generate la usa en partidos sin análisis; discover no gasta cuota en ellos. Hoy: 0 de 88 partidos (solo 63 resultados guardados). Empieza a rendir cuando cada equipo tenga 5 partidos guardados (~5-6 semanas). 79/79. |
+| 5 | Re-validar las 9 ligas CSV sin usar con el criterio nuevo (0.62 / respaldo 0.79) | ✅ hecho y subido | 24 438 partidos descargados una vez. Over 2.5: ninguna pasa (todas <62%) → bloqueadas también por API-Football (antes entraban sin validar). Over 1.5: 2. Bundesliga pasa (80.3%) → respaldo por CSV, sin cuota; Austria (80.1%) → respaldo por API-Football. Las otras 7 ya no gastan consultas en discover. 80/80. |
 | 4 | Plan de pago de API-Football | ⏸️ en espera | Solo si 1-3 no alcanzan. Revisar precio antes. |
 
 ## Bitácora
@@ -16,3 +17,5 @@ Estados: ⏳ pendiente · 🔧 en proceso · ✅ hecho · ⏸️ en espera.
 - 2026-11-16: tarea 1 terminada (código y prueba). Empezando la tarea 2.
 - 2026-11-16: tarea 2 terminada. Tareas 1 y 2 subidas a GitHub (Vercel despliega solo). Empezando la tarea 3.
 - 2026-11-16: tarea 3 terminada y subida. Revisar a partir del 2026-12-07 cuántos partidos ya tienen forma propia; con eso decidir la tarea 4.
+- 2026-11-16: corrección: las ligas de API-Football ya se usan todas; lo que suma es pasar ligas a CSV (sin cuota). Empezando la tarea 5: descarga única del historial para backtest.
+- 2026-11-16: tarea 5 terminada. Resultado: +1 liga de respaldo gratis (2. Bundesliga), menos partidos malos en over 2.5 y más cuota libre para otras ligas.

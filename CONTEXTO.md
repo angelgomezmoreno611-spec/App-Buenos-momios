@@ -729,3 +729,12 @@ No se dejaron servidores activos ni se desplegó el proyecto.
   partidos de API-Football sin análisis; discover no gasta /predictions en ellos
   (`localFeatures` en su respuesta). Comprobado hoy: 88 próximos, 63 resultados
   guardados, 0 con forma propia (empieza a rendir en ~5-6 semanas). 79/79.
+- 2026-11-16: (5) re-validación de las 9 ligas CSV sin usar (`npm run import:csv`,
+  descarga única 2021-07+, 24 438 partidos en backend/data, ignorado; backtest.js
+  acepta --line=1.5; backtest-form.js --summary). Modelo principal: over 2.5 ≥0.62
+  ninguna (37-59% o <40 sel.); over 1.5 ≥0.79 solo D2 543/80.3%. Forma: over 2.5
+  todas <62% (D2 60.9, AUT 58.6, resto 25-50%); over 1.5 D2 80.8, AUT 80.1, resto
+  <80. Aplicado: D2 en CSV_VALIDATION.OVER_1_5 (respaldo CSV) y af-79 cubierta;
+  MARKET_BLOCKED over 2.5 = las 9 ligas en API-Football; over 1.5 bloquea 7 (no
+  AUT ni D2); AF_ANALYSIS_SKIP evita gastar /predictions en esas 7. Ids AF
+  confirmados con 1 consulta /leagues?current=true. 80/80.

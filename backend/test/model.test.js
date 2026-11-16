@@ -296,3 +296,12 @@ test('ligas solo de respaldo (validadas en over 1.5) nunca entran como over 2.5'
     [['OVER_2_5', 'af-9'], ['OVER_2_5', 'af-9'], ['OVER_1_5', 'MEX'], ['OVER_1_5', 'MEX']]);
   assert.ok(batch.tickets.every(x => x.selections.every(s => !(s.market === 'OVER_2_5' && s.match.league.id === 'MEX'))));
 });
+test('ligas re-validadas: bloqueadas en over 2.5 por API-Football; Austria solo respaldo; 2. Bundesliga por CSV', async () => {
+  const { MARKET_BLOCKED } = await import('../src/tickets.js');
+  const { AF_ANALYSIS_SKIP, COVERED_LEAGUES } = await import('../src/apifootball.js');
+  const { CSV_VALIDATION } = await import('../src/csvleagues.js');
+  for (const id of [79, 62, 136, 180, 141, 218, 283, 98, 128]) assert.ok(MARKET_BLOCKED.OVER_2_5.includes(`af-${id}`));
+  assert.ok(!MARKET_BLOCKED.OVER_1_5.includes('af-218')); // Austria: respaldo over 1.5
+  assert.ok(MARKET_BLOCKED.OVER_1_5.includes('af-98') && AF_ANALYSIS_SKIP.has(98) && !AF_ANALYSIS_SKIP.has(218));
+  assert.ok(COVERED_LEAGUES.has(79) && CSV_VALIDATION.OVER_1_5.D2 && !CSV_VALIDATION.OVER_2_5.D2);
+});

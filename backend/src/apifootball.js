@@ -18,7 +18,12 @@ export const FORM_MODEL_VERSION = 'form-af-v1';
 export const FORM_MIN = Object.freeze({ OVER_1_5: 0.79, OVER_2_5: 0.62, OVER_3_5: 0.45 });
 export const FORM_EVIDENCE = 'Forma reciente (API-Football) con promedios ajustados a la media de la liga: en backtest (15 201 partidos, 2023-2026) over 2.5 con 65% o más acertó el 65.0% y over 1.5 con 85% o más el 85.6%. La liga concreta no está validada.';
 // Ligas ya cubiertas por football-data.org, CSV u OpenLigaDB (ids de API-Football).
-export const COVERED_LEAGUES = new Set([39, 40, 140, 135, 78, 80, 61, 88, 94, 71, 103, 113, 169, 207, 203, 119, 253, 144, 262, 179, 183, 184, 244, 106, 197, 357]);
+export const COVERED_LEAGUES = new Set([39, 40, 140, 135, 78, 80, 61, 88, 94, 71, 103, 113, 169, 207, 203, 119, 253, 144, 262, 179, 183, 184, 244, 106, 197, 357, 79]);
+// Ligas medidas con mal acierto en ambos mercados con el modelo de forma
+// (npm run backtest:form -- --summary, 2021-07 a 2026-11): discover no gasta
+// consultas en ellas. Ligue 2, Serie B, Championship (Escocia), LaLiga 2, Liga I,
+// J1 y Argentina. (Austria, 218, solo sirve como respaldo over 1.5: 80.1%.)
+export const AF_ANALYSIS_SKIP = new Set([62, 136, 180, 141, 283, 98, 128]);
 const EXCLUDED_NAME = /cup|copa|coupe|coppa|pokal|ta[cç]a|trophy|troph[ée]e|shield|friendl|amistos|u1\d|u2[0-3]|youth|juvenil|primavera|reserve|play-?off|qualif|super ?cup/i;
 const EXCLUDED_ROUND = /final|semi|quarter|play|round of|knockout|relegation|promotion/i;
 export const AF_DAILY_BUDGET = 85; // deja 15 consultas libres para pruebas manuales
@@ -161,7 +166,7 @@ export function featuresFromHistory(match, finished, { minPlayed = FORM_SHRINK.m
 // repartidos entre ligas (una ronda por liga antes de repetir).
 export function pickForAnalysis(fixtures, { now, until, limit, priority = () => 0 }) {
   const byLeague = new Map();
-  for (const m of fixtures.filter(m => m.status === 'TIMED' && isLeagueGame(m) &&
+  for (const m of fixtures.filter(m => m.status === 'TIMED' && isLeagueGame(m) && !AF_ANALYSIS_SKIP.has(m.league.afId) &&
     Date.parse(m.kickoff) > now + HOUR && Date.parse(m.kickoff) <= until)
     .sort((a, b) => priority(b) - priority(a) || a.kickoff.localeCompare(b.kickoff) || a.id.localeCompare(b.id))) {
     (byLeague.get(m.league.afId) ?? byLeague.set(m.league.afId, []).get(m.league.afId)).push(m);

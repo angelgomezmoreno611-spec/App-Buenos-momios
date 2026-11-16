@@ -72,6 +72,14 @@ function evaluate(set, market, threshold, opts) {
   return { evaluated: n, picks, hitRate: picks ? hits / picks : NaN, brier: n ? brier / n : NaN };
 }
 
+// --summary: solo el resumen con la configuración de producción (todo el periodo),
+// en JSON, para comparar ligas una por una.
+if (args.includes('--summary')) {
+  const prod = { method: 'shrink', k: 2, league: true };
+  console.log(JSON.stringify({ samples: samples.length,
+    over25_062: evaluate(samples, 'OVER_2_5', 0.62, prod), over15_079: evaluate(samples, 'OVER_1_5', 0.79, prod) }));
+  process.exit(0);
+}
 const fmt = r => `${String(r.picks).padStart(5)} sel. ${(r.hitRate * 100).toFixed(1).padStart(5)}% | evaluados ${r.evaluated} | Brier ${r.brier.toFixed(4)}`;
 const validation = samples.filter(s => s.t < testFrom), test = samples.filter(s => s.t >= testFrom);
 console.log(`Partidos: ${matches.length}; con datos de forma: ${samples.length} (validación ${validation.length}, prueba ${test.length})`);
