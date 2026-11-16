@@ -1,5 +1,6 @@
 import { generateBatch, batchDay, resultOf, DREAMER } from './tickets.js';
 import { deliverNotifications } from './push.js';
+import { lambdaFromOver15 } from './apifootball.js';
 import { syncCsv, CSV_LEAGUES, CSV_VALIDATION } from './csvleagues.js';
 import { oldbSnapshot, oldbResults, OLDB_LEAGUES, OLDB_VALIDATION, OLDB_ATTRIBUTION } from './openliga.js';
 
@@ -48,7 +49,10 @@ export async function runJob(kind, { repo, provider, push, timeZone, minProbabil
       // API-Football: partidos ya analizados por el job discover (sin consultas aquí).
       if (afEnabled) {
         const af = await repo.afUpcoming(now, now + 72 * 3_600_000, { analyzed: true }).catch(() => null);
-        if (af) snapshot.fixtures = [...snapshot.fixtures, ...af.filter(m => m.formFeatures)];
+        // Media de goles de cada liga (tasa de over 1.5 acumulada) para encoger promedios.
+        const rates = af ? await Promise.resolve().then(() => repo.afLeagueRates()).catch(() => new Map()) : new Map();
+        const goalsOf = m => { const r = rates.get(m.league.afId); return r && r.matches >= 10 ? lambdaFromOver15(r.over15) : undefined; };
+        if (af) snapshot.fixtures = [...snapshot.fixtures, ...af.filter(m => m.formFeatures).map(m => ({ ...m, formLeagueGoals: goalsOf(m) }))];
       }
       // OpenLigaDB (3. Liga): consulta directa, gratis; si falla, se sigue sin ella.
       if (openLiga?.leagues?.length) {

@@ -5,7 +5,7 @@ import { formPredict, FORM_MIN, FORM_EVIDENCE } from './apifootball.js';
 // Partidos de API-Football (traen `formFeatures`) usan el modelo de forma reciente
 // y un umbral más exigente; el resto, el modelo principal con historial.
 const isForm = f => 'formFeatures' in f;
-const predictFixture = (f, history, opts) => isForm(f) ? formPredict(f, f.formFeatures, opts) : predict(f, history, opts);
+const predictFixture = (f, history, opts) => isForm(f) ? formPredict(f, f.formFeatures, { ...opts, leagueGoals: f.formLeagueGoals }) : predict(f, history, opts);
 const minFor = (f, market, base) => isForm(f) ? Math.max(base, FORM_MIN[market]) : base;
 
 export function dayKey(now = Date.now(), timeZone = 'America/Mazatlan') {
@@ -35,7 +35,7 @@ export function dreamerTicket(fixtures, history, { now, usedIds, number }) {
     .sort((a, b) => b.prediction.probability - a.prediction.probability || a.match.id.localeCompare(b.match.id))
     .slice(0, picks);
   if (ranked.length < picks) return null;
-  const selections = ranked.map(({ match: { formFeatures, analyzed, ...match }, prediction }) =>
+  const selections = ranked.map(({ match: { formFeatures, formLeagueGoals, analyzed, ...match }, prediction }) =>
     ({ match, prediction, market, result: 'pending', score: null }));
   return { id: randomUUID(), number, kind: 'dreamer', name, status: 'pending', selections,
     probability: selections.reduce((p, x) => p * x.prediction.probability, 1) };
@@ -64,7 +64,7 @@ export function generateBatch(snapshot, { now = Date.now(), timeZone, minProbabi
       rejections.push({ matchId: f.id, reason: prediction.reason ?? 'Probabilidad inferior al umbral' });
       continue;
     }
-    const { formFeatures, analyzed, ...match } = f; // no se publican datos internos
+    const { formFeatures, formLeagueGoals, analyzed, ...match } = f; // no se publican datos internos
     candidates.push({ match, prediction, market, result: 'pending', score: null });
   }
   candidates.sort((a, b) => b.prediction.probability - a.prediction.probability || a.match.id.localeCompare(b.match.id));
@@ -96,7 +96,7 @@ export function generateBatch(snapshot, { now = Date.now(), timeZone, minProbabi
       'Probabilidades estimadas solo con marcadores históricos; sin garantía de ganancias.',
       'Probabilidad del ticket calculada suponiendo independencia; pueden existir correlaciones.',
       'Sin cuotas actuales: no se calcula valor esperado ni rentabilidad.',
-      ...([...tickets, ...(extra ? [extra] : [])].some(t => t.selections.some(x => x.prediction.modelVersion === 'form-af-v1')) ? [FORM_EVIDENCE] : []),
+      ...([...tickets, ...(extra ? [extra] : [])].some(t => t.selections.some(x => x.prediction.modelVersion?.startsWith('form-af-v1'))) ? [FORM_EVIDENCE] : []),
       ...(extra ? [`${DREAMER.name}: 6 over 2.5, probabilidad conjunta estimada ${Math.round(extra.probability * 100)}%. Alto riesgo.`] : [])
     ]
   };

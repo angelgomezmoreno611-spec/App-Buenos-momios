@@ -13,7 +13,7 @@ const HOUR = 3_600_000;
 export const FORM_MODEL_VERSION = 'form-af-v1';
 // Umbral mínimo por mercado para partidos analizados con este método.
 export const FORM_MIN = Object.freeze({ OVER_1_5: 0.85, OVER_2_5: 0.65, OVER_3_5: 0.45 });
-export const FORM_EVIDENCE = 'Forma reciente (API-Football): método medido en 25 660 partidos de 30 ligas; over 1.5 con 85% o más acertó el 84.7%. La liga concreta no está validada.';
+export const FORM_EVIDENCE = 'Forma reciente (API-Football) con promedios ajustados a la media de la liga: en backtest (15 201 partidos, 2023-2026) over 2.5 con 65% o más acertó el 65.0% y over 1.5 con 85% o más el 85.6%. La liga concreta no está validada.';
 // Ligas ya cubiertas por football-data.org, CSV u OpenLigaDB (ids de API-Football).
 export const COVERED_LEAGUES = new Set([39, 40, 140, 135, 78, 80, 61, 88, 94, 71, 103, 113, 169, 207, 203, 119, 253, 144, 262, 179, 183, 184, 244, 106, 197, 357]);
 const EXCLUDED_NAME = /cup|copa|coupe|coppa|pokal|ta[cç]a|trophy|troph[ée]e|shield|friendl|amistos|u1\d|u2[0-3]|youth|juvenil|primavera|reserve|play-?off|qualif|super ?cup/i;
@@ -72,23 +72,53 @@ export function featuresFromPrediction(data) {
 const overPoisson = (lambda, goals) => { let t = Math.exp(-lambda), below = 0; for (let i = 0; i < goals; i++) { below += t; t *= lambda / (i + 1); } return 1 - below; };
 const clamp = (x, lo, hi) => Math.max(lo, Math.min(hi, x));
 const GOALS = { 1.5: 2, 2.5: 3, 3.5: 4 };
+// Media de goles de la liga a partir de su tasa de over 1.5 (Poisson): resuelve
+// 1 - e^-λ(1+λ) = r por bisección. Sin dato, 2.7 goles (media típica).
+export function lambdaFromOver15(rate) {
+  if (!Number.isFinite(rate) || rate <= 0.3 || rate >= 0.99) return 2.7;
+  let lo = 0.3, hi = 8;
+  for (let i = 0; i < 40; i++) { const mid = (lo + hi) / 2; (1 - Math.exp(-mid) * (1 + mid) < rate ? lo = mid : hi = mid); }
+  return (lo + hi) / 2;
+}
+// Encogimiento hacia la media de la liga: con pocos partidos manda la liga, con
+// muchos el equipo. k = partidos "virtuales" de la media (elegido por backtest).
+// Reparto casa/fuera de la media: 55% / 45% (típico en ligas europeas).
+// Backtest (`npm run backtest:form`, 15 201 partidos; prueba 2023-07+): over 2.5 ≥0.65
+// pasó de 787 sel./64.9% (mín. 4, sin encoger) a 904/65.0% con k=2 y media de liga.
+export const FORM_SHRINK = Object.freeze({ k: 2, minPlayed: 2, homeShare: 0.55 });
+export function shrinkFeatures(f, { leagueGoals = 2.7, k = FORM_SHRINK.k, homeShare = FORM_SHRINK.homeShare } = {}) {
+  const home = leagueGoals * homeShare, away = leagueGoals - home, mean = leagueGoals / 2;
+  const mix = (value, n, prior) => (n * value + k * prior) / (n + k);
+  return { ...f,
+    homeFor: mix(f.homeFor, f.homePlayed, home), homeAgainst: mix(f.homeAgainst, f.homePlayed, away),
+    awayFor: mix(f.awayFor, f.awayPlayed, away), awayAgainst: mix(f.awayAgainst, f.awayPlayed, home),
+    homeLast5For: mix(f.homeLast5For, 5, mean), homeLast5Against: mix(f.homeLast5Against, 5, mean),
+    awayLast5For: mix(f.awayLast5For, 5, mean), awayLast5Against: mix(f.awayLast5Against, 5, mean) };
+}
+
 // Mismo cálculo que el backtest: 70% temporada (casa/fuera) + 30% últimos 5.
-export function formPredict(fixture, features, { line = 1.5, asOf = Date.now() } = {}) {
+// method 'shrink' (por defecto tras backtest) admite equipos con 2+ partidos y
+// encoge sus promedios hacia la media de la liga; 'raw' es el método original.
+export function formPredict(fixture, rawFeatures, { line = 1.5, asOf = Date.now(), method = 'shrink', leagueGoals, k } = {}) {
+  const features = rawFeatures;
   const reject = reason => ({ eligible: false, matchId: fixture.id, reason });
   if (!features) return reject('Sin datos de forma reciente');
   if (Date.parse(fixture.kickoff) <= asOf) return reject('El partido ya empezó o no tiene horario');
-  if (features.homePlayed < 4 || features.awayPlayed < 4) return reject('Muestra insuficiente: mínimo 4 partidos en casa/fuera esta temporada');
-  const f = features;
+  const shrink = method === 'shrink', min = shrink ? FORM_SHRINK.minPlayed : 4;
+  if (!(features.homePlayed >= min && features.awayPlayed >= min)) return reject(`Muestra insuficiente: mínimo ${min} partidos en casa/fuera esta temporada`);
+  const f = shrink ? shrinkFeatures(features, { leagueGoals, k }) : features;
   const expectedHome = clamp(0.7 * (f.homeFor + f.awayAgainst) / 2 + 0.3 * (f.homeLast5For + f.awayLast5Against) / 2, 0.1, 5);
   const expectedAway = clamp(0.7 * (f.awayFor + f.homeAgainst) / 2 + 0.3 * (f.awayLast5For + f.homeLast5Against) / 2, 0.1, 5);
   const probability = clamp(overPoisson(expectedHome + expectedAway, GOALS[line]), 0.03, 0.97);
   return {
     eligible: true, matchId: fixture.id, line, probability, rawProbability: probability,
     expectedGoals: expectedHome + expectedAway, expectedHome, expectedAway,
-    modelVersion: FORM_MODEL_VERSION, calibrated: false, asOf: new Date(asOf).toISOString(), features: f,
+    modelVersion: shrink ? `${FORM_MODEL_VERSION}-shrink` : FORM_MODEL_VERSION, calibrated: false,
+    asOf: new Date(asOf).toISOString(), features,
     reasons: [
-      `Local en casa: ${f.homeFor.toFixed(1)} a favor y ${f.homeAgainst.toFixed(1)} en contra por partido (${f.homePlayed} jugados).`,
-      `Visitante fuera: ${f.awayFor.toFixed(1)} a favor y ${f.awayAgainst.toFixed(1)} en contra por partido (${f.awayPlayed} jugados).`,
+      `Local en casa: ${features.homeFor.toFixed(1)} a favor y ${features.homeAgainst.toFixed(1)} en contra por partido (${features.homePlayed} jugados).`,
+      `Visitante fuera: ${features.awayFor.toFixed(1)} a favor y ${features.awayAgainst.toFixed(1)} en contra por partido (${features.awayPlayed} jugados).`,
+      ...(shrink ? ['Promedios ajustados hacia la media de la liga según los partidos jugados (pocos partidos pesan menos).'] : []),
       `Goles esperados por el modelo de forma reciente: ${(expectedHome + expectedAway).toFixed(2)}.`,
       'Liga sin validar: datos de API-Football (temporada actual y últimos 5 partidos).'
     ]

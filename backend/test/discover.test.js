@@ -27,10 +27,34 @@ test('API-Football: normaliza, filtra copas y ligas cubiertas, y calcula forma r
   assert.equal(normalizeAfFixture({ ...fx(6, 333), fixture: { id: 6, date: '2026-11-07T18:00:00Z', status: { short: 'AET' } }, score: { fulltime: { home: 1, away: 1 } } }).status, 'LIVE');
   const f = featuresFromPrediction(prediction(2.5, 1.5, 2, 2));
   assert.equal(f.homePlayed, 6);
-  const p = formPredict({ id: 'af-1', kickoff: '2099-01-01T00:00:00Z' }, f, { line: 1.5 });
+  const p = formPredict({ id: 'af-1', kickoff: '2099-01-01T00:00:00Z' }, f, { line: 1.5, method: 'raw' });
   assert.ok(p.eligible && p.probability > 0.85 && p.modelVersion === 'form-af-v1');
-  assert.equal(formPredict({ id: 'af-1', kickoff: '2099-01-01T00:00:00Z' }, featuresFromPrediction(prediction(2, 2, 2, 2, 3))).eligible, false);
+  // Original: mínimo 4 partidos; encogido (por defecto): mínimo 2.
+  const three = featuresFromPrediction(prediction(2, 2, 2, 2, 3));
+  assert.equal(formPredict({ id: 'af-1', kickoff: '2099-01-01T00:00:00Z' }, three, { method: 'raw' }).eligible, false);
+  assert.equal(formPredict({ id: 'af-1', kickoff: '2099-01-01T00:00:00Z' }, three).eligible, true);
+  assert.equal(formPredict({ id: 'af-1', kickoff: '2099-01-01T00:00:00Z' }, featuresFromPrediction(prediction(2, 2, 2, 2, 1))).eligible, false);
   assert.equal(featuresFromPrediction({ response: [] }), null);
+});
+
+test('encogimiento: pocos partidos acercan la probabilidad a la media de la liga', async () => {
+  const { lambdaFromOver15, shrinkFeatures } = await import('../src/apifootball.js');
+  // Ida y vuelta: λ=2.7 da over 1.5 ≈ 0.751.
+  const rate = 1 - Math.exp(-2.7) * (1 + 2.7);
+  assert.ok(Math.abs(lambdaFromOver15(rate) - 2.7) < 1e-6);
+  assert.equal(lambdaFromOver15(null), 2.7);
+  const kick = { id: 'af-1', kickoff: '2099-01-01T00:00:00Z' };
+  const big = n => featuresFromPrediction(prediction(4, 2, 3, 3, n)); // equipos muy goleadores
+  const at = (n, leagueGoals) => formPredict(kick, big(n), { line: 2.5, leagueGoals }).probability;
+  const raw = formPredict(kick, big(9), { line: 2.5, method: 'raw' }).probability;
+  // Con 2 partidos el dato pesa menos que con 9; ninguno supera al promedio sin ajustar.
+  assert.ok(at(2) < at(9) && at(9) < raw);
+  // En una liga más goleadora la misma forma da más probabilidad.
+  assert.ok(at(2, 3.4) > at(2, 2.3));
+  const s = shrinkFeatures({ homePlayed: 2, awayPlayed: 2, homeFor: 4, homeAgainst: 0, awayFor: 0, awayAgainst: 4,
+    homeLast5For: 1, homeLast5Against: 1, awayLast5For: 1, awayLast5Against: 1 }, { leagueGoals: 2.7, k: 2 });
+  assert.ok(Math.abs(s.homeFor - (2 * 4 + 2 * 1.485) / 4) < 1e-9);
+  assert.equal(formPredict(kick, big(3)).modelVersion, 'form-af-v1-shrink');
 });
 
 test('pickForAnalysis reparte entre ligas y prioriza las más goleadoras', () => {

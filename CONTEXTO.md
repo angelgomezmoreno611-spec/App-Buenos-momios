@@ -657,3 +657,17 @@ No se dejaron servidores activos ni se desplegó el proyecto.
   inglesa, Irlanda del Norte, Druha Liga ucraniana, CFL checa. 47 rechazos por
   probabilidad y 30 por muestra insuficiente. Se liquidan con la lista de "ayer"
   de discover (ahora programado).
+- 2026-11-16: método nuevo para el modelo de forma (API-Football): encogimiento
+  hacia la media de la liga (`shrinkFeatures`, k=2; media de liga = λ Poisson
+  desde la tasa de over 1.5 de `af_league_rates` con ≥10 partidos, si no 2.7) y
+  mínimo 2 partidos en casa/fuera (antes 4). Script `npm run backtest:form` (15 201
+  partidos: openfootball 5 ligas 2019-2025 + 4 514 CSV de 16 ligas; validación
+  <2023-07, prueba después). Comprobado, over 2.5 ≥0.65: original 787 sel./64.9%
+  → encogido 904/65.0% en prueba (validación 542/64.2% → 678/64.6%); Brier
+  mejor; over 1.5 ≥0.85: 720/85.1% → 827/85.6%. Media global (sin liga) encoge de
+  más (pocas selecciones). Con datos reales de hoy: 11 → 10 selecciones (entran 4
+  de CONCACAF con 2/2 partidos; salen 5 que estaban en el límite). El cuello de
+  botella real es la cuota: 82 analizados de 782 partidos encontrados.
+  Umbral con el método nuevo (validación / prueba): 0.62 → 1080 sel. 62.0% /
+  1434 sel. 64.9%; 0.60 → 1405 sel. 60.6% / 1859 sel. 63.9%. Sin decidir: el
+  usuario elige si baja FORM_MIN de over 2.5 (hoy 0.65).
