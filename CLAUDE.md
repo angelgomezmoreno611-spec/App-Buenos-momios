@@ -26,6 +26,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
     `vbxnbhajqcohgpzyeeli`. Migraciones nuevas: `supabase db push --linked --dry-run` y
     luego `supabase db push --linked` (pedir confirmación: es producción). `db dump` no
     funciona (requiere Docker).
+  - Vercel CLI 65.9.0 en `~/.local/bin/vercel` (sesión del usuario; correr desde
+    `backend/`, ya vinculado). Variables: `vercel env ls production`.
 - Remoto Git: `origin` → github.com/angelgomezmoreno611-spec/App-Buenos-momios (público), rama `main`.
 
 ## Comandos
@@ -55,7 +57,12 @@ flutter test --concurrency=1 test/football_test.dart
 flutter run -d web-server --web-port=8080 --dart-define=APP_MODE=demo
 flutter run -d web-server --web-port=8080 --dart-define-from-file=config.local.json
 flutter build web --dart-define=APP_MODE=demo
+../tools/release-apk.sh "Qué cambió"   # APK arm64 build N+1 → release app-vN en GitHub (+ adb install)
 ```
+
+El botón "Actualizar" de la app (`lib/updater.dart`) busca el release `app-vN` más
+alto con APK y lo compara con `APP_BUILD`. Publicar siempre con el script (misma
+clave debug de firma y número de versión creciente).
 
 ## Arquitectura
 

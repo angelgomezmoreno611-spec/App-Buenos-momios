@@ -6,6 +6,8 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'api.dart';
 import 'models.dart';
 import 'notifications.dart';
+import 'package:url_launcher/url_launcher.dart';
+import 'updater.dart';
 import 'football_screen.dart';
 
 const lime = Color(0xFFC4F566);
@@ -20,6 +22,9 @@ class Dashboard extends StatefulWidget {
 
 class _DashboardState extends State<Dashboard> with WidgetsBindingObserver {
   final _api = Api();
+  final _updater = Updater();
+  AppRelease? _update;
+  bool _updateBusy = false;
   late final PushService _push = PushService(_api);
   Batch? _batch;
   List<Batch> _history = [];
@@ -59,6 +64,8 @@ class _DashboardState extends State<Dashboard> with WidgetsBindingObserver {
     }
     if (!mounted) return;
     await _load();
+    // Búsqueda silenciosa de una versión nueva de la app (solo datos reales).
+    if (mounted && !Api.demo) unawaited(_checkUpdate(silent: true));
     if (mounted && !Api.demo) {
       _timer = Timer.periodic(const Duration(seconds: 90), (_) {
         if (WidgetsBinding.instance.lifecycleState ==
@@ -72,6 +79,60 @@ class _DashboardState extends State<Dashboard> with WidgetsBindingObserver {
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed) _load();
+  }
+
+  Future<void> _checkUpdate({bool silent = false}) async {
+    if (_updateBusy) return;
+    setState(() => _updateBusy = true);
+    try {
+      final release = await _updater.available();
+      if (!mounted) return;
+      setState(() => _update = release);
+      if (release == null) {
+        if (!silent) {
+          _notice('Ya tienes la versión más reciente (v${Updater.build}).');
+        }
+      } else if (!silent) {
+        await _offerUpdate(release);
+      }
+    } catch (_) {
+      if (!silent && mounted) {
+        _notice('No se pudo buscar actualizaciones. Revisa tu conexión.');
+      }
+    } finally {
+      if (mounted) setState(() => _updateBusy = false);
+    }
+  }
+
+  Future<void> _offerUpdate(AppRelease release) async {
+    final accept = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('Versión ${release.build} disponible'),
+        content: Text(
+          [
+            if (release.notes.trim().isNotEmpty) release.notes.trim(),
+            'Se descargará el APK; al terminar, ábrelo y confirma la instalación.',
+          ].join('\n\n'),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Después'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Actualizar'),
+          ),
+        ],
+      ),
+    );
+    if (accept != true || !mounted) return;
+    final opened = await launchUrl(
+      release.apkUrl,
+      mode: LaunchMode.externalApplication,
+    );
+    if (!opened && mounted) _notice('No se pudo abrir la descarga.');
   }
 
   Future<void> _load() async {
@@ -374,17 +435,37 @@ class _DashboardState extends State<Dashboard> with WidgetsBindingObserver {
         children: [
           Icon(Icons.sports_soccer, color: lime, size: 27),
           SizedBox(width: 10),
-          Text(
-            'buenos momios',
-            style: TextStyle(
-              fontWeight: FontWeight.w800,
-              fontSize: 20,
-              letterSpacing: -0.7,
+          Flexible(
+            child: Text(
+              'buenos momios',
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                fontWeight: FontWeight.w800,
+                fontSize: 20,
+                letterSpacing: -0.7,
+              ),
             ),
           ),
         ],
       ),
       actions: [
+        IconButton(
+          tooltip: _update != null
+              ? 'Actualizar a la versión ${_update!.build}'
+              : 'Buscar actualización de la app',
+          onPressed: _updateBusy
+              ? null
+              : () => _update != null ? _offerUpdate(_update!) : _checkUpdate(),
+          icon: Badge(
+            isLabelVisible: _update != null,
+            backgroundColor: lime,
+            smallSize: 9,
+            child: Icon(
+              Icons.system_update_outlined,
+              color: _update != null ? lime : muted,
+            ),
+          ),
+        ),
         IconButton(
           tooltip: _push.active ? 'Desactivar avisos' : 'Activar avisos',
           onPressed: _alertBusy ? null : _toggleAlerts,
@@ -395,7 +476,7 @@ class _DashboardState extends State<Dashboard> with WidgetsBindingObserver {
             color: _push.active ? lime : muted,
           ),
         ),
-        const SizedBox(width: 12),
+        const SizedBox(width: 4),
       ],
     ),
     body: Center(
@@ -506,7 +587,7 @@ class _DashboardState extends State<Dashboard> with WidgetsBindingObserver {
               Column(
                 children: [
                   Text(
-                    '${_batch?.regularTickets.length ?? 0}/4',
+                    '${_batch?.regularTickets.length ?? 0}/${_batch?.maxTickets ?? 3}',
                     style: const TextStyle(
                       color: lime,
                       fontSize: 32,
@@ -826,9 +907,7 @@ class TicketCard extends StatelessWidget {
         padding: const EdgeInsets.all(21),
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(22),
-          border: Border.all(
-            color: ticket.isSpecial ? ticket.accent : border,
-          ),
+          border: Border.all(color: ticket.isSpecial ? ticket.accent : border),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -838,8 +917,9 @@ class TicketCard extends StatelessWidget {
                 Container(
                   padding: const EdgeInsets.all(9),
                   decoration: BoxDecoration(
-                    color: (ticket.isSpecial ? ticket.accent : lime)
-                        .withValues(alpha: 0.1),
+                    color: (ticket.isSpecial ? ticket.accent : lime).withValues(
+                      alpha: 0.1,
+                    ),
                     borderRadius: BorderRadius.circular(10),
                   ),
                   child: Icon(

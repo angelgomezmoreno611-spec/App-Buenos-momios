@@ -600,3 +600,17 @@ No se dejaron servidores activos ni se desplegó el proyecto.
   ("La soñadora necesita seis partidos") sin dejar lote. Desde ahora las
   migraciones nuevas se aplican con `supabase db push --linked`.
   PENDIENTE: revisar TICKET_* en Vercel, commit + push, recompilar APK.
+- 2026-11-15: botón "Actualizar" en la app (`mobile/lib/updater.dart`): consulta
+  los releases `app-vN` de GitHub (repo público), compara N con `APP_BUILD`
+  (dart-define) y abre la descarga del APK con url_launcher (Android pide
+  confirmar la instalación). Búsqueda silenciosa al abrir (solo modo real) y
+  manual con el ícono de la barra; insignia verde si hay versión nueva.
+  `tools/release-apk.sh "notas"` compila arm64 con build N+1, publica el release
+  con `gh` y, si el Poco F7 está por USB, lo instala con adb. Firma: clave debug
+  de ~/.android/debug.keystore (debe ser la misma siempre, o Android rechaza la
+  actualización). Título de la barra flexible (con dos íconos se desbordaba en
+  390 px). Comprobado: 17/17 Flutter, analyze limpio.
+- 2026-11-15: Vercel CLI 65.9.0 (`~/.local/bin/vercel`, envoltorio con Node 22 y
+  heap 512 MiB); ya había sesión del usuario y `backend/.vercel` vinculado.
+  Comprobado: en Production NO existen TICKET_* (rige el valor por defecto
+  nuevo) y el despliegue del commit 2239ef6 está Ready.
