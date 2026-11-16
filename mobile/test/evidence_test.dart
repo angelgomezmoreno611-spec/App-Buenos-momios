@@ -83,9 +83,46 @@ void main() {
       ],
     });
     expect(batch.regularTickets.length, 1);
-    final risky = batch.riskyTicket!;
+    final risky = batch.specialTicket!;
     expect([risky.title, risky.lineLabel, risky.legs], ['El arriesgado del día', 'mixto', 4]);
     expect(risky.picks.map((p) => p.goalsNeeded).toList(), [4, 4, 3, 3]);
     expect(batch.regularTickets.first.title, 'Ticket 01');
+    expect([batch.maxTickets, batch.uniqueMatches], [4, 10]);
+  });
+
+  test('La soñadora: 6 over 2.5 aparte de 3 tickets normales', () {
+    Map<String, dynamic> pick() => {'market': 'OVER_2_5'};
+    Map<String, dynamic> ticket(int n) => {
+      'id': 't$n',
+      'number': n,
+      'status': 'pending',
+      'probability': 0.18,
+      'selections': List.generate(4, (_) => pick()),
+    };
+    final batch = Batch({
+      'warnings': <String>[],
+      'line': 2.5,
+      'legs': 4,
+      'maxTickets': 3,
+      'tickets': [
+        ticket(1),
+        ticket(2),
+        ticket(3),
+        {
+          'id': 'd',
+          'number': 4,
+          'kind': 'dreamer',
+          'name': 'La soñadora',
+          'status': 'pending',
+          'probability': 0.06,
+          'selections': List.generate(6, (_) => pick()),
+        },
+      ],
+    });
+    final dreamer = batch.specialTicket!;
+    expect(batch.regularTickets.length, 3);
+    expect([dreamer.isDreamer, dreamer.isRisky, dreamer.title, dreamer.lineLabel, dreamer.legs],
+        [true, false, 'La soñadora', '2.5', 6]);
+    expect([batch.maxTickets, batch.uniqueMatches], [3, 18]);
   });
 }

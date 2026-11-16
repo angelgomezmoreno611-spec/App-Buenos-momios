@@ -17,8 +17,15 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Entorno
 
-- Node 22 no está en PATH: `export PATH="/tmp/node-v22.23.4-linux-x64/bin:$PATH"`.
-- Flutter SDK: `/tmp/buenos-momios-flutter/bin/flutter`, con `PUB_CACHE=/tmp/buenos-momios-pub-cache`.
+- Herramientas en `~/.local/opt` (antes en `/tmp`, que se borra al reiniciar):
+  - Node 22 no está en PATH: `export PATH="$HOME/.local/opt/node-v22.23.4-linux-x64/bin:$PATH"`.
+  - Flutter 3.35.7 (coincide con `pubspec.lock`; versiones nuevas cambian el lock y
+    rompen pruebas de widgets): `~/.local/opt/flutter-3.35.7/bin/flutter`, con
+    `PUB_CACHE=$HOME/.local/opt/pub-cache`.
+  - Supabase CLI 2.122.0 en `~/.local/bin/supabase`, ya vinculada al proyecto
+    `vbxnbhajqcohgpzyeeli`. Migraciones nuevas: `supabase db push --linked --dry-run` y
+    luego `supabase db push --linked` (pedir confirmación: es producción). `db dump` no
+    funciona (requiere Docker).
 - Remoto Git: `origin` → github.com/angelgomezmoreno611-spec/App-Buenos-momios (público), rama `main`.
 
 ## Comandos
@@ -36,6 +43,7 @@ npm run check:football [-- --configured]  # consultas reales; --configured consu
 npm run import:openfootball               # descarga ~10.7k partidos CC0 a data/ (ignorado)
 npm run backtest -- data/openfootball.json # evaluar el modelo con ese histórico
 npm run calibrate -- data/openfootball.json [AAAA-MM-DD] # ajustar Platt y validar tras la fecha
+npm run tune -- data/openfootball.json [AAAA-MM-DD val] [AAAA-MM-DD prueba] # búsqueda de parámetros con validación temporal
 ```
 
 Mobile (`cd mobile`):
@@ -51,15 +59,15 @@ flutter build web --dart-define=APP_MODE=demo
 
 ## Arquitectura
 
-Producto: tickets de **over 1.5 goles con 6 partidos** (umbral 0.80) por defecto;
-over 2.5 con 4 partidos (umbral 0.65) sigue disponible con `TICKET_MARKET=OVER_2_5`
-y `TICKET_LEGS=4`. La API publica hasta cuatro tickets por día (sin repetir
-partidos), liquida resultados según el mercado de cada selección y prepara avisos.
-En over 1.5 se excluyen LaLiga y Serie A (`MARKET_BLOCKED`, acierto medido bajo).
-Además, un quinto ticket opcional "El arriesgado del día" (`riskyTicket`, `kind:
-'risky'`): 2 over 3.5 (≥0.40) + 2 over 2.5 (≥0.65) con partidos que no usan los
-normales; `TICKET_RISKY=false` lo apaga. Requiere migración 006; si la base lo
-rechaza, la tanda se publica sin él.
+Producto: **3 tickets over 2.5 de 4 partidos** (umbral 0.65) por día, sin repetir
+partidos (`TICKET_COUNT`, `TICKET_MARKET`, `TICKET_LEGS`; over 1.5 con 6 partidos y
+umbral 0.80 sigue disponible y ahí se excluyen LaLiga y Serie A, `MARKET_BLOCKED`).
+Además, el ticket especial **"La soñadora"** (`dreamerTicket`, `kind: 'dreamer'`):
+6 over 2.5 (≥0.65) con partidos que no usan los normales; `TICKET_DREAMER=false` lo
+apaga. Requiere migración 008; si la base lo rechaza, la tanda se publica sin él.
+"El arriesgado del día" (`kind: 'risky'`) ya no se genera, pero la base y la app
+siguen leyendo tandas antiguas con él. La API liquida según el mercado de cada
+selección y el tamaño (`legs`) de cada ticket.
 
 **Backend** (`backend/`, Node ESM sin framework, sin dependencias de runtime):
 - `src/config.js` → `configuredApp(env)` es el único punto de cableado: según
@@ -75,6 +83,10 @@ rechaza, la tanda se publica sin él.
   con la temporada actual) →
   `repository.js` (`SupabaseRepository`, REST de Supabase con clave secreta) y
   `push.js` (Firebase, opcional). `demo.js` genera datos sintéticos.
+- Los jobs **no** se programan en Vercel: los dispara pg_cron + pg_net desde
+  Supabase (URL y secreto en Vault), según `supabase/schedule.example.sql`. Los
+  cambios de horario los aplica el usuario en Supabase (`cron.alter_job`); generate
+  corre a las 00:01 de Mazatlán (UTC-7) para que `dayKey` ya sea el día nuevo.
 - Rutas de usuario (`/api/tickets`, `/api/history`, `/api/subscriptions`,
   `/api/devices`, `/api/football/*`) verifican la sesión contra Supabase Auth.
 - `src/csvleagues.js`: ligas extra desde CSV de football-data.co.uk (sin API). Su

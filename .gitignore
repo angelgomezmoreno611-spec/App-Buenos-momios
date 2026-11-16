@@ -20,3 +20,6 @@ tools/.flutter-sdk/
 *.iml
 mobile/config.local.json
 backend/data/
+
+# Supabase CLI (vínculo local del proyecto)
+supabase/.temp/

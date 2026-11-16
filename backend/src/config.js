@@ -19,9 +19,11 @@ export function configuredApp(env = process.env) {
   };
   if (mode === 'demo') return createApp(common);
   if (!env.CRON_SECRET || env.CRON_SECRET.length < 32) throw new Error('CRON_SECRET requiere mínimo 32 caracteres');
-  // Mercado y tamaño de ticket. Por defecto: over 1.5, 6 partidos, umbral 0.80.
-  const market = env.TICKET_MARKET?.trim() || 'OVER_1_5', legs = Number(env.TICKET_LEGS ?? 6);
+  // Mercado, tamaño y número de tickets. Por defecto: 3 tickets over 2.5 de 4 partidos (umbral 0.65).
+  const market = env.TICKET_MARKET?.trim() || 'OVER_2_5', legs = Number(env.TICKET_LEGS ?? 4);
+  const maxTickets = Number(env.TICKET_COUNT ?? 3);
   if (!MARKETS[market] || ![4, 6].includes(legs)) throw new Error('TICKET_MARKET o TICKET_LEGS inválidos');
+  if (!Number.isInteger(maxTickets) || maxTickets < 1 || maxTickets > 4) throw new Error('TICKET_COUNT debe estar entre 1 y 4');
   const minProbability = Number(env.MIN_PROBABILITY ?? (market === 'OVER_1_5' ? 0.8 : 0.65));
   // Ligas de football-data.co.uk (CSV): "none" las desactiva.
   const csvLeagues = env.CSV_COMPETITIONS === undefined ? defaultCsvLeagues(market)
@@ -42,9 +44,9 @@ export function configuredApp(env = process.env) {
     return football ??= new FootballData({ token: env.FOOTBALL_DATA_TOKEN.trim(), competitions: env.FOOTBALL_COMPETITIONS,
       fetcher: async (url, options) => Response.json(await footballHttp.get('football-data', url, options.headers)) });
   };
-  return createApp({ ...common, csvLeagues, openLiga, market, legs, minProbability,
-    // Ticket "El arriesgado del día" (2 over 3.5 + 2 over 2.5): TICKET_RISKY=false lo apaga.
-    risky: env.TICKET_RISKY?.trim() !== 'false',
+  return createApp({ ...common, csvLeagues, openLiga, market, legs, maxTickets, minProbability,
+    // Ticket "La soñadora" (6 over 2.5): TICKET_DREAMER=false lo apaga.
+    dreamer: env.TICKET_DREAMER?.trim() !== 'false',
     // Descubrimiento de partidos con API-Football (plan gratuito); AF_DISCOVERY=false lo apaga.
     apiFootball: env.API_FOOTBALL_KEY?.trim() && env.AF_DISCOVERY?.trim() !== 'false' ? { key: env.API_FOOTBALL_KEY.trim() } : null, evidence: EVIDENCE[market] ?? null,
     repo: new SupabaseRepository({ url: env.SUPABASE_URL,

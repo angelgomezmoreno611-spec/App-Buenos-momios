@@ -102,31 +102,31 @@ test('over 1.5: Poisson, resultado y tickets de 6 partidos', async () => {
   assert.ok(none.rejections.every(r => /bajo acierto/.test(r.reason)));
 });
 
-test('ticket arriesgado: 2 over 3.5 + 2 over 2.5 sin repetir partidos de los normales', async () => {
-  const { riskyTicket, RISKY } = await import('../src/tickets.js');
+test('La soñadora: 6 over 2.5 sin repetir partidos de los normales', async () => {
+  const { dreamerTicket, DREAMER } = await import('../src/tickets.js');
   const now = Date.parse('2026-11-05T17:00:00Z'), snapshot = demoSnapshot(now);
-  // Con los normales llenos, el arriesgado no encuentra partidos libres: no se fuerza.
-  const full = generateBatch(snapshot, { now, market: 'OVER_1_5', legs: 6, minProbability: 0.5, risky: true });
-  assert.equal(full.tickets.some(t => t.kind === 'risky'), false);
-  // Umbral alto en los normales deja partidos libres para el arriesgado.
-  const batch = generateBatch(snapshot, { now, market: 'OVER_1_5', legs: 6, minProbability: 0.95, risky: true });
-  const risky = batch.tickets.find(t => t.kind === 'risky');
-  const normal = batch.tickets.filter(t => t.kind !== 'risky');
+  // Con los normales llenos (4 × 4 de 20 partidos) quedan 4 libres: no se fuerza.
+  const full = generateBatch(snapshot, { now, minProbability: 0.5, dreamer: true });
+  assert.equal(full.tickets.some(t => t.kind === 'dreamer'), false);
+  // Un solo ticket normal deja partidos libres para La soñadora.
+  const batch = generateBatch(snapshot, { now, minProbability: 0.5, maxTickets: 1, dreamer: true });
+  const dreamer = batch.tickets.find(t => t.kind === 'dreamer');
+  const normal = batch.tickets.filter(t => t.kind !== 'dreamer');
   const normalIds = new Set(normal.flatMap(t => t.selections.map(s => s.match.id)));
-  assert.ok(risky);
-  {
-    assert.equal(risky.name, RISKY.name);
-    assert.deepEqual(risky.selections.map(s => s.market), ['OVER_3_5', 'OVER_3_5', 'OVER_2_5', 'OVER_2_5']);
-    assert.ok(risky.selections.every(s => !normalIds.has(s.match.id)));
-    assert.equal(risky.number, normal.length + 1);
-    assert.ok(Math.abs(risky.probability - risky.selections.reduce((p, s) => p * s.prediction.probability, 1)) < 1e-12);
-    assert.ok(batch.warnings.some(w => w.startsWith(RISKY.name)));
-  }
-  // Sin candidatos suficientes no se fuerza el ticket.
-  assert.equal(riskyTicket(snapshot.fixtures.slice(0, 1), snapshot.history, { now, usedIds: [], number: 1 }), null);
-  const direct = riskyTicket(snapshot.fixtures, snapshot.history, { now, usedIds: [], number: 5 });
-  assert.ok(direct === null || direct.selections.length === 4);
-  assert.equal(generateBatch(snapshot, { now, market: 'OVER_1_5', legs: 6, minProbability: 0.5 }).tickets.some(t => t.kind === 'risky'), false);
+  assert.equal(normal.length, 1);
+  assert.ok(dreamer);
+  assert.equal(dreamer.name, DREAMER.name);
+  assert.deepEqual(dreamer.selections.map(s => s.market), Array(6).fill('OVER_2_5'));
+  assert.ok(dreamer.selections.every(s => !normalIds.has(s.match.id) && s.prediction.probability >= DREAMER.min));
+  assert.equal(new Set(dreamer.selections.map(s => s.match.id)).size, 6);
+  assert.equal(dreamer.number, 2);
+  assert.ok(Math.abs(dreamer.probability - dreamer.selections.reduce((p, s) => p * s.prediction.probability, 1)) < 1e-12);
+  assert.ok(batch.warnings.some(w => w.startsWith(DREAMER.name)));
+  assert.equal(batch.maxTickets, 1);
+  // Sin candidatos suficientes no se fuerza el ticket; apagada no aparece.
+  assert.equal(dreamerTicket(snapshot.fixtures.slice(0, 5), snapshot.history, { now, usedIds: [], number: 1 }), null);
+  assert.equal(generateBatch(snapshot, { now, minProbability: 0.5, maxTickets: 1 }).tickets.some(t => t.kind === 'dreamer'), false);
+  assert.throws(() => generateBatch(snapshot, { now, maxTickets: 5 }), /Número de tickets/);
   assert.deepEqual(resultOf({ status: 'FINISHED', homeGoals: 2, awayGoals: 2 }, 'OVER_3_5'), { result: 'won', score: '2–2' });
   assert.equal(resultOf({ status: 'FINISHED', homeGoals: 2, awayGoals: 1 }, 'OVER_3_5').result, 'lost');
 });

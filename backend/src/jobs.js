@@ -1,4 +1,4 @@
-import { generateBatch, dayKey, resultOf } from './tickets.js';
+import { generateBatch, dayKey, resultOf, DREAMER } from './tickets.js';
 import { deliverNotifications } from './push.js';
 import { syncCsv, CSV_LEAGUES, CSV_VALIDATION } from './csvleagues.js';
 import { oldbSnapshot, oldbResults, OLDB_LEAGUES, OLDB_VALIDATION, OLDB_ATTRIBUTION } from './openliga.js';
@@ -14,7 +14,7 @@ export function previousSeason(now = Date.now(), league = '') {
   return (d.getUTCMonth() >= 6 ? year : year - 1) - 1;
 }
 
-export async function runJob(kind, { repo, provider, push, timeZone, minProbability, csvLeagues, csvSync, market, legs, evidence, openLiga, risky, afEnabled, now = Date.now() }) {
+export async function runJob(kind, { repo, provider, push, timeZone, minProbability, csvLeagues, csvSync, market, legs, maxTickets, evidence, openLiga, dreamer, afEnabled, now = Date.now() }) {
   const owner = await repo.acquireLock();
   if (!owner) return { skipped: true, reason: 'Hay otra tarea ejecutándose o se está respetando el límite del proveedor' };
   const deadline = Date.now() + 45_000;
@@ -64,18 +64,18 @@ export async function runJob(kind, { repo, provider, push, timeZone, minProbabil
             ...(measured.length ? [`Acierto medido por partido en 2022-2026 con umbral ${minProbability} (selecciones): ${measured.join(', ')}.`] : [])];
         }
       }
-      const batch = generateBatch(snapshot, { now, timeZone, minProbability, excludedIds, market, legs, evidence, risky });
+      const batch = generateBatch(snapshot, { now, timeZone, minProbability, excludedIds, market, legs, maxTickets, evidence, dreamer });
       let publishedId;
       try { publishedId = await repo.publish(batch); }
       catch (error) {
-        // Sin la migración 006 la base rechaza el quinto ticket: se publica sin él.
-        if (!batch.tickets.some(t => t.kind === 'risky')) throw error;
-        batch.tickets = batch.tickets.filter(t => t.kind !== 'risky');
-        batch.warnings = [...batch.warnings.filter(w => !w.startsWith('El arriesgado')), 'El arriesgado del día no se pudo publicar en esta tanda.'];
+        // Sin la migración 008 la base rechaza La soñadora: se publica sin ella.
+        if (!batch.tickets.some(t => t.kind === 'dreamer')) throw error;
+        batch.tickets = batch.tickets.filter(t => t.kind !== 'dreamer');
+        batch.warnings = [...batch.warnings.filter(w => !w.startsWith(DREAMER.name)), `${DREAMER.name} no se pudo publicar en esta tanda.`];
         publishedId = await repo.publish(batch);
       }
-      return { batchId: publishedId, tickets: batch.tickets.filter(t => t.kind !== 'risky').length,
-        risky: batch.tickets.some(t => t.kind === 'risky'), missingMatches: batch.missingMatches };
+      return { batchId: publishedId, tickets: batch.tickets.filter(t => t.kind !== 'dreamer').length,
+        dreamer: batch.tickets.some(t => t.kind === 'dreamer'), missingMatches: batch.missingMatches };
     }
     if (kind === 'settle') {
       const pending = await repo.pendingMatches(now);

@@ -281,6 +281,8 @@ class _DashboardState extends State<Dashboard> with WidgetsBindingObserver {
                 if (_batch?.evidence != null) _batch!.evidence!.summary,
                 ticket.isRisky
                     ? 'Ticket de alto riesgo: 2 over 3.5 (4 goles o más) y 2 over 2.5 (3 goles o más) en 90 minutos más descuento.'
+                    : ticket.isDreamer
+                    ? 'Ticket soñador de alto riesgo: ${ticket.legs} partidos over 2.5 (3 goles o más) en 90 minutos más descuento.'
                     : 'Over ${ticket.lineLabel} significa ${ticket.picks.isEmpty ? 2 : ticket.picks.first.goalsNeeded} goles o más en 90 minutos más descuento.',
               ].join(' '),
               style: const TextStyle(color: muted, height: 1.5),
@@ -542,7 +544,7 @@ class _DashboardState extends State<Dashboard> with WidgetsBindingObserver {
         ),
         if (_batch != null)
           Text(
-            '${_batch!.day} · ${_batch!.regularTickets.length * _batch!.legs + (_batch!.riskyTicket == null ? 0 : 4)} partidos únicos',
+            '${_batch!.day} · ${_batch!.uniqueMatches} partidos únicos',
             style: const TextStyle(color: muted, fontSize: 12),
           ),
         const SizedBox(height: 18),
@@ -598,15 +600,19 @@ class _DashboardState extends State<Dashboard> with WidgetsBindingObserver {
                         onTap: () => _showTicket(ticket),
                       ),
                     ),
-                  for (var i = _batch!.regularTickets.length; i < 4; i++)
+                  for (
+                    var i = _batch!.regularTickets.length;
+                    i < _batch!.maxTickets;
+                    i++
+                  )
                     SizedBox(width: width, child: _emptyTicket(i + 1)),
-                  // El arriesgado va aparte, al final, para no confundirlo.
-                  if (_batch!.riskyTicket != null)
+                  // El ticket especial va aparte, al final, para no confundirlo.
+                  if (_batch!.specialTicket != null)
                     SizedBox(
                       width: width,
                       child: TicketCard(
-                        ticket: _batch!.riskyTicket!,
-                        onTap: () => _showTicket(_batch!.riskyTicket!),
+                        ticket: _batch!.specialTicket!,
+                        onTap: () => _showTicket(_batch!.specialTicket!),
                       ),
                     ),
                 ],
@@ -617,7 +623,7 @@ class _DashboardState extends State<Dashboard> with WidgetsBindingObserver {
             Padding(
               padding: const EdgeInsets.only(top: 18),
               child: Notice(
-                'Faltan ${_batch!.missing} partidos que superen los filtros para completar 4 tickets de ${_batch!.legs}. No se bajó el umbral.',
+                'Faltan ${_batch!.missing} partidos que superen los filtros para completar ${_batch!.maxTickets} tickets de ${_batch!.legs}. No se bajó el umbral.',
                 icon: Icons.filter_alt_outlined,
               ),
             ),
@@ -821,7 +827,7 @@ class TicketCard extends StatelessWidget {
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(22),
           border: Border.all(
-            color: ticket.isRisky ? Colors.orangeAccent : border,
+            color: ticket.isSpecial ? ticket.accent : border,
           ),
         ),
         child: Column(
@@ -832,15 +838,17 @@ class TicketCard extends StatelessWidget {
                 Container(
                   padding: const EdgeInsets.all(9),
                   decoration: BoxDecoration(
-                    color: (ticket.isRisky ? Colors.orangeAccent : lime)
+                    color: (ticket.isSpecial ? ticket.accent : lime)
                         .withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(10),
                   ),
                   child: Icon(
-                    ticket.isRisky
+                    ticket.isDreamer
+                        ? Icons.auto_awesome_outlined
+                        : ticket.isRisky
                         ? Icons.local_fire_department_outlined
                         : Icons.confirmation_number_outlined,
-                    color: ticket.isRisky ? Colors.orangeAccent : lime,
+                    color: ticket.isSpecial ? ticket.accent : lime,
                     size: 21,
                   ),
                 ),
@@ -1082,4 +1090,9 @@ class _Explanation extends StatelessWidget {
       ],
     ),
   );
+}
+
+extension on Ticket {
+  // Color del ticket especial: morado para La soñadora, naranja para el arriesgado.
+  Color get accent => isDreamer ? Colors.purpleAccent : Colors.orangeAccent;
 }

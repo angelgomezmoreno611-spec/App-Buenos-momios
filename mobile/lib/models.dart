@@ -11,6 +11,8 @@ class Batch {
   // Lotes antiguos no traen estos campos: over 2.5 y 4 partidos.
   double get line => (data['line'] as num?)?.toDouble() ?? 2.5;
   int get legs => (data['legs'] as num?)?.toInt() ?? 4;
+  // Tickets normales por tanda; lotes antiguos no lo traen (eran 4).
+  int get maxTickets => (data['maxTickets'] as num?)?.toInt() ?? 4;
   String get lineLabel => line.toStringAsFixed(1);
   int get goalsNeeded => line.floor() + 1;
   List<String> get warnings => List<String>.from(data['warnings'] as List);
@@ -20,13 +22,17 @@ class Batch {
   List<Ticket> get tickets => (data['tickets'] as List)
       .map((t) => Ticket(Map<String, dynamic>.from(t as Map)))
       .toList();
-  List<Ticket> get regularTickets => tickets.where((t) => !t.isRisky).toList();
-  Ticket? get riskyTicket {
+  List<Ticket> get regularTickets =>
+      tickets.where((t) => !t.isSpecial).toList();
+  // Ticket especial: "La soñadora" (o "El arriesgado del día" en tandas antiguas).
+  Ticket? get specialTicket {
     for (final t in tickets) {
-      if (t.isRisky) return t;
+      if (t.isSpecial) return t;
     }
     return null;
   }
+
+  int get uniqueMatches => tickets.fold(0, (n, t) => n + t.legs);
 }
 
 /// Acierto medido del modelo en una temporada que no usó para ajustarse.
@@ -64,9 +70,13 @@ class Ticket {
       .map((p) => Pick(Map<String, dynamic>.from(p as Map)))
       .toList();
   int get legs => (data['selections'] as List).length;
-  bool get isRisky => data['kind'] == 'risky';
-  String get title => isRisky
-      ? (data['name'] as String? ?? 'El arriesgado del día')
+  String get kind => data['kind'] as String? ?? 'regular';
+  bool get isRisky => kind == 'risky';
+  bool get isDreamer => kind == 'dreamer';
+  bool get isSpecial => kind != 'regular';
+  String get title => isSpecial
+      ? (data['name'] as String? ??
+            (isDreamer ? 'La soñadora' : 'El arriesgado del día'))
       : 'Ticket 0$number';
   // Un solo mercado ("1.5") o "mixto" en el ticket arriesgado.
   String get lineLabel {

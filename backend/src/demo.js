@@ -25,5 +25,5 @@ export function demoSnapshot(now = Date.now()) {
 }
 
 export function demoBatch(now = Date.now()) {
-  return generateBatch(demoSnapshot(now), { now, mode: 'demo' });
+  return generateBatch(demoSnapshot(now), { now, mode: 'demo', maxTickets: 3, dreamer: true });
 }

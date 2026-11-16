@@ -562,3 +562,41 @@ No se dejaron servidores activos ni se desplegó el proyecto.
   API_FOOTBALL_KEY añadida a Vercel (sensible). 65/65 pruebas. Consultas AF
   gastadas hoy en pruebas: ~22. PENDIENTE usuario: migración 007 y cron
   `momios-discover`.
+- 2026-11-15: pedido del usuario: solo 4 tickets al día, 3 over 2.5 de 4 partidos +
+  "La soñadora" (6 over 2.5). Implementado: por defecto `TICKET_MARKET=OVER_2_5`,
+  `TICKET_LEGS=4`, nuevo `TICKET_COUNT=3` (1-4); `dreamerTicket` (kind `dreamer`,
+  6 selecciones ≥0.65 con partidos libres; `TICKET_DREAMER=false` la apaga). "El
+  arriesgado del día" ya no se genera (la base y la app siguen leyendo tandas
+  antiguas con `risky`). Al pasar a over 2.5 cambian solas las ligas: CSV las
+  validadas para 2.5 y la 3. Liga (OpenLigaDB) queda fuera (solo validada en 1.5).
+  Migración `008_dreamer_ticket.sql` (kind `dreamer`, 6 partidos, máx. 1 ticket
+  especial por tanda); sin ella, generate publica sin La soñadora. Comprobado:
+  66/66 backend, 14/14 Flutter, analyze limpio. Demo: 3 tickets + soñadora 12%.
+  Estimación real: ≈0.63^6 ≈ 6% (1 de cada 16), supuesto según backtest over 2.5.
+  PENDIENTE: aplicar 008 en Supabase; revisar que Vercel no tenga
+  TICKET_MARKET/TICKET_LEGS viejos (OVER_1_5/6) que anulen el nuevo valor por
+  defecto; subir a GitHub para que Vercel despliegue; recompilar el APK.
+- 2026-11-15: StatArena: el usuario dio una clave (guardada como
+  STATARENA_API_KEY en `backend/.env`, 600; quedó escrita en el chat, conviene
+  regenerarla). Comprobado en su documentación pública: API en "early access", el
+  host es un marcador (`https://{endpoint}.statarena-api.com/v1`, cabecera
+  `X-API-Key`), partidos por fecha requieren plan Basic. No integrada: falta que el
+  usuario dé el host exacto y su plan desde su panel.
+- 2026-11-15: `/tmp` se había borrado (Node y Flutter perdidos). Reinstalados en
+  `~/.local/opt`: Node 22.23.4, Flutter 3.35.7 (3.47 cambiaba `pubspec.lock` y
+  rompía 2 pruebas de widgets por un shader) y Supabase CLI 2.122.0
+  (`~/.local/bin/supabase`, checksums verificados). PENDIENTE usuario:
+  `supabase login` y `supabase link` (contraseña de la base); ojo: las
+  migraciones 001-007 se aplicaron a mano, así que hay que marcarlas con
+  `supabase migration repair --status applied` antes de `db push`.
+- 2026-11-15: Supabase CLI vinculada (`supabase link`, proyecto
+  vbxnbhajqcohgpzyeeli; `supabase/.temp/` ignorado). `db dump` no sirve (pide
+  Docker), pero `migration list/repair` y `db push` sí. Comprobado: la base no
+  tenía historial de migraciones y la 007 estaba a medias (tablas sí, vista
+  `af_league_rates` no). 007 hecha idempotente (prueba nueva que la reaplica).
+  Con autorización del usuario: `migration repair --status applied 001-006` y
+  `db push` de 007 y 008. Verificado: historial 001-008 aplicado, vista 200,
+  anon sin acceso a af_matches (42501), publish_batch rechaza una soñadora de 4
+  ("La soñadora necesita seis partidos") sin dejar lote. Desde ahora las
+  migraciones nuevas se aplican con `supabase db push --linked`.
+  PENDIENTE: revisar TICKET_* en Vercel, commit + push, recompilar APK.

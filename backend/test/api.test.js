@@ -286,16 +286,17 @@ test('generate suma la 3. Liga con atribución y settle la liquida en over 1.5',
   await runJob('settle', { repo: settleRepo, provider: {}, now, openLiga: { leagues: ['BL3'], get } });
   assert.deepEqual(applied, [{ matchId: 'oldb-7', result: 'won', score: '1–1' }]);
 });
-test('si la base rechaza el ticket arriesgado, la tanda se publica sin él', async () => {
+test('si la base rechaza La soñadora, la tanda se publica sin ella', async () => {
   const now = Date.parse('2026-11-05T17:00:00Z'), full = demoSnapshot(now);
   const attempts = [];
   const repo = { acquireLock: async () => 'lease', releaseLock: async () => {}, getBatch: async () => null, usedMatches: async () => [],
     history: async () => full.history,
-    publish: async batch => { attempts.push(batch.tickets.map(t => t.kind ?? 'regular')); if (batch.tickets.some(t => t.kind === 'risky')) throw new Error('Base de datos: HTTP 400'); return batch.id; } };
+    publish: async batch => { attempts.push(batch.tickets.map(t => t.kind ?? 'regular')); if (batch.tickets.some(t => t.kind === 'dreamer')) throw new Error('Base de datos: HTTP 400'); return batch.id; } };
   const provider = { competitions: () => ['DEMO'], snapshot: async () => ({ ...full, history: [] }) };
-  const result = await runJob('generate', { repo, provider, now, minProbability: 0.95, market: 'OVER_1_5', legs: 6, risky: true });
-  assert.deepEqual(attempts, [['risky'], []]);
-  assert.equal(result.risky, false);
+  const result = await runJob('generate', { repo, provider, now, minProbability: 0.5, maxTickets: 1, dreamer: true });
+  assert.deepEqual(attempts, [['regular', 'dreamer'], ['regular']]);
+  assert.equal(result.dreamer, false);
+  assert.equal(result.tickets, 1);
 });
 test('settle liquida partidos de API-Football con lo guardado por discover', async () => {
   const applied = [];

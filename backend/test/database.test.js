@@ -34,11 +34,12 @@ before(async () => {
 after(async () => { await db?.close(); });
 const publish = batch => db.query('select public.publish_batch($1::jsonb) id', [JSON.stringify(batch)]);
 
-test('PostgreSQL publica 4x4 atómicamente y no reutiliza partidos entre días', async () => {
+test('PostgreSQL publica 3x4 + La soñadora atómicamente y no reutiliza partidos entre días', async () => {
   const batch = demoBatch(); batch.mode = 'live';
+  assert.deepEqual(batch.tickets.map(t => t.kind ?? 'regular'), ['regular', 'regular', 'regular', 'dreamer']);
   const result = await publish(batch);
   assert.equal(result.rows[0].id, batch.id);
-  assert.equal((await db.query('select count(*)::int n from public.selections')).rows[0].n, 16);
+  assert.equal((await db.query('select count(*)::int n from public.selections')).rows[0].n, 18);
   assert.equal((await publish({ ...batch, id: randomUUID() })).rows[0].id, batch.id);
   const tomorrow = structuredClone(batch);
   tomorrow.id = randomUUID(); tomorrow.day = '2099-01-02';
@@ -115,6 +116,7 @@ test('migración conserva las tandas y fechas del historial anterior', async () 
   try {
     await legacy.exec(await readFile(new URL('../../supabase/migrations/001_initial.sql', import.meta.url), 'utf8'));
     const batch = demoBatch(); batch.mode = 'live';
+    batch.tickets = batch.tickets.filter(t => !t.kind); // el esquema antiguo solo admite tickets normales
     await legacy.query('select public.publish_batch($1::jsonb)', [JSON.stringify(batch)]);
     await legacy.query('select public.subscribe_device($1,$2,$3,$4)', [userA, batch.id, 'legacy-device-token-123456789', 'android']);
     const original = await legacy.query('select user_id,batch_id,created_at from public.batch_subscriptions');
@@ -158,8 +160,8 @@ test('PostgreSQL acepta tickets de 6 partidos over 1.5 y los liquida con su tama
   bad.tickets = [{ ...bad.tickets[0], id: randomUUID(), selections: bad.tickets[0].selections.slice(0, 5).map(s => ({ ...s, match: { ...s.match, id: `x-${s.match.id}` } })) }];
   await assert.rejects(publish(bad), /cuatro o seis/);
 });
-test('PostgreSQL acepta un quinto ticket arriesgado con mercados mixtos', async () => {
-  const { generateBatch, riskyTicket } = await import('../src/tickets.js');
+test('PostgreSQL sigue aceptando el ticket arriesgado de tandas antiguas', async () => {
+  const { generateBatch } = await import('../src/tickets.js');
   const { demoSnapshot } = await import('../src/demo.js');
   const now = Date.parse('2026-11-05T17:00:00Z'), snapshot = demoSnapshot(now);
   const batch = generateBatch(snapshot, { now, market: 'OVER_1_5', legs: 6, minProbability: 0.5, mode: 'live' });
@@ -168,7 +170,7 @@ test('PostgreSQL acepta un quinto ticket arriesgado con mercados mixtos', async 
   const pool = snapshot.fixtures.slice(0, 4).map((f, i) => ({ ...f, id: `rk-${i}-${f.id}` }));
   const risky = { id: randomUUID(), number: batch.tickets.length + 1, kind: 'risky', name: 'El arriesgado del día', status: 'pending', probability: 0.05,
     selections: pool.map((f, i) => ({ match: f, market: i < 2 ? 'OVER_3_5' : 'OVER_2_5', prediction: {}, result: 'pending', score: null })) };
-  assert.equal(pool.length, 4); assert.equal(typeof riskyTicket, 'function');
+  assert.equal(pool.length, 4);
   batch.tickets = [...batch.tickets, risky];
   for (const t of batch.tickets) for (const s of t.selections) s.match = { ...s.match, id: `risky-${s.match.id}` };
   await publish(batch);
@@ -179,6 +181,24 @@ test('PostgreSQL acepta un quinto ticket arriesgado con mercados mixtos', async 
   const twice = structuredClone(batch); twice.id = randomUUID(); twice.day = '2099-04-02';
   twice.tickets = [risky, { ...risky, id: randomUUID() }].map(t => ({ ...t, selections: t.selections.map(s => ({ ...s, match: { ...s.match, id: `${s.match.id}-${randomUUID()}` } })) }));
   await assert.rejects(publish(twice), /Lote inválido/);
+});
+test('PostgreSQL acepta La soñadora con 6 partidos y rechaza otros tamaños', async () => {
+  const { generateBatch } = await import('../src/tickets.js');
+  const { demoSnapshot } = await import('../src/demo.js');
+  const now = Date.parse('2026-11-05T17:00:00Z'), snapshot = demoSnapshot(now);
+  const batch = generateBatch(snapshot, { now, minProbability: 0.5, maxTickets: 1, mode: 'live' });
+  batch.id = randomUUID(); batch.day = '2099-05-01';
+  const pool = snapshot.fixtures.slice(0, 6).map((f, i) => ({ ...f, id: `dr-${i}-${f.id}` }));
+  const dreamer = { id: randomUUID(), number: batch.tickets.length + 1, kind: 'dreamer', name: 'La soñadora', status: 'pending', probability: 0.06,
+    selections: pool.map(f => ({ match: f, market: 'OVER_2_5', prediction: {}, result: 'pending', score: null })) };
+  batch.tickets = [...batch.tickets, dreamer];
+  for (const t of batch.tickets) for (const s of t.selections) s.match = { ...s.match, id: `dream-${s.match.id}` };
+  await publish(batch);
+  const row = (await db.query('select kind, legs, ordinal from public.tickets where id = $1', [dreamer.id])).rows[0];
+  assert.deepEqual(row, { kind: 'dreamer', legs: 6, ordinal: batch.tickets.length });
+  const short = structuredClone(batch); short.id = randomUUID(); short.day = '2099-05-02';
+  short.tickets = [{ ...dreamer, id: randomUUID(), selections: dreamer.selections.slice(0, 4).map(s => ({ ...s, match: { ...s.match, id: `${s.match.id}-${randomUUID()}` } })) }];
+  await assert.rejects(publish(short), /seis partidos/);
 });
 test('af_matches valida ids y marcador; af_league_rates resume over 1.5 por liga', async () => {
   await db.exec(`insert into public.af_matches(id, league_id, league_name, kickoff, home_id, home_name, away_id, away_name, status, home_goals, away_goals) values
@@ -193,4 +213,10 @@ test('af_matches valida ids y marcador; af_league_rates resume over 1.5 por liga
   assert.deepEqual(rate, { matches: 2, over15: 0.5 });
   await assert.rejects(db.exec('set role anon; select * from public.af_matches;'), /permission denied/);
   await db.exec('reset role;');
+});
+test('la migración 007 completa una aplicación parcial sin fallar (producción sin vista)', async () => {
+  await db.exec('drop view public.af_league_rates');
+  await db.exec(await readFile(new URL('../../supabase/migrations/007_af_matches.sql', import.meta.url), 'utf8'));
+  const { rows } = await db.query('select count(*)::int n from public.af_league_rates');
+  assert.equal(typeof rows[0].n, 'number');
 });
