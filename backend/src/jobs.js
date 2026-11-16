@@ -1,4 +1,4 @@
-import { generateBatch, dayKey, resultOf, DREAMER } from './tickets.js';
+import { generateBatch, batchDay, resultOf, DREAMER } from './tickets.js';
 import { deliverNotifications } from './push.js';
 import { syncCsv, CSV_LEAGUES, CSV_VALIDATION } from './csvleagues.js';
 import { oldbSnapshot, oldbResults, OLDB_LEAGUES, OLDB_VALIDATION, OLDB_ATTRIBUTION } from './openliga.js';
@@ -20,7 +20,7 @@ export async function runJob(kind, { repo, provider, push, timeZone, minProbabil
   const deadline = Date.now() + 45_000;
   try {
     if (kind === 'generate') {
-      const day = dayKey(now, timeZone), existing = await repo.getBatch(day);
+      const day = batchDay(now, timeZone), existing = await repo.getBatch(day);
       if (existing) return { batchId: existing.id, existing: true };
       const excludedIds = await repo.usedMatches(now);
       const snapshot = await provider.snapshot(now);
@@ -64,7 +64,7 @@ export async function runJob(kind, { repo, provider, push, timeZone, minProbabil
             ...(measured.length ? [`Acierto medido por partido en 2022-2026 con umbral ${minProbability} (selecciones): ${measured.join(', ')}.`] : [])];
         }
       }
-      const batch = generateBatch(snapshot, { now, timeZone, minProbability, excludedIds, market, legs, maxTickets, evidence, dreamer });
+      const batch = generateBatch(snapshot, { now, timeZone, minProbability, excludedIds, market, legs, maxTickets, evidence, dreamer, day });
       let publishedId;
       try { publishedId = await repo.publish(batch); }
       catch (error) {

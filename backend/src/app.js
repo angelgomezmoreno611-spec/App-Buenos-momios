@@ -1,6 +1,6 @@
 import { timingSafeEqual } from 'node:crypto';
 import { demoBatch } from './demo.js';
-import { dayKey } from './tickets.js';
+import { dayKey, batchDay } from './tickets.js';
 import { runJob } from './jobs.js';
 import { runDiscover } from './discover.js';
 import { FootballService } from './football/service.js';
@@ -70,7 +70,11 @@ export function createApp({ mode = 'live', repo, provider, push, cronSecret, tim
         if (mode === 'demo') {
           if (!demo || demo.day !== dayKey()) demo = demoBatch();
           batch = demo;
-        } else batch = await repo.getBatch(dayKey(Date.now(), timeZone));
+        } else {
+          // De 23:40 a 00:00 se muestra la tanda de mañana si ya se generó.
+          const now = Date.now(), next = batchDay(now, timeZone), today = dayKey(now, timeZone);
+          batch = await repo.getBatch(next) ?? (next !== today ? await repo.getBatch(today) : null);
+        }
         return send(res, 200, { batch, message: batch ? null : 'Todavía no se ha publicado el análisis de hoy.' });
       }
       if (path === '/api/history' && req.method === 'GET') {

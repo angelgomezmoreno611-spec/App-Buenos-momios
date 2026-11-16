@@ -307,3 +307,21 @@ test('settle liquida partidos de API-Football con lo guardado por discover', asy
   await runJob('settle', { repo, provider: {}, now: Date.now() });
   assert.deepEqual(applied.map(r => [r.matchId, r.result]), [['af-1', 'lost'], ['af-2', 'review']]);
 });
+test('a las 23:45 de Mazatlán generate crea la tanda de mañana y el respaldo de las 00:01 no duplica', async () => {
+  const { batchDay } = await import('../src/tickets.js');
+  const tz = 'America/Mazatlan';
+  assert.equal(batchDay(Date.parse('2026-11-16T06:30:00Z'), tz), '2026-11-15'); // 23:30
+  assert.equal(batchDay(Date.parse('2026-11-16T06:45:00Z'), tz), '2026-11-16'); // 23:45
+  assert.equal(batchDay(Date.parse('2026-11-16T12:00:00Z'), tz), '2026-11-16'); // 05:00
+  const now = Date.parse('2026-11-16T06:45:00Z'), full = demoSnapshot(now), stored = new Map();
+  const repo = { acquireLock: async () => 'lease', releaseLock: async () => {}, usedMatches: async () => [],
+    getBatch: async day => stored.get(day) ?? null, history: async () => full.history,
+    publish: async batch => { stored.set(batch.day, batch); return batch.id; } };
+  const provider = { competitions: () => ['DEMO'], snapshot: async () => ({ ...full, history: [] }) };
+  const result = await runJob('generate', { repo, provider, now, timeZone: tz, minProbability: 0.5, dreamer: true });
+  assert.deepEqual([...stored.keys()], ['2026-11-16']);
+  assert.equal(stored.get('2026-11-16').day, '2026-11-16');
+  // El respaldo de las 00:01 encuentra la tanda y no genera otra.
+  assert.equal((await runJob('generate', { repo, provider, now: now + 16 * 60_000, timeZone: tz })).existing, true);
+  assert.equal(result.batchId, stored.get('2026-11-16').id);
+});

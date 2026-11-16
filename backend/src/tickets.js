@@ -13,6 +13,11 @@ export function dayKey(now = Date.now(), timeZone = 'America/Mazatlan') {
   return ['year', 'month', 'day'].map(k => parts.find(x => x.type === k).value).join('-');
 }
 
+// La tanda del día siguiente se genera a las 23:45 (Mazatlán): desde 20 min antes
+// de medianoche, generate y /api/tickets ya usan la fecha de mañana.
+export const GENERATE_AHEAD_MS = 20 * 60_000;
+export const batchDay = (now = Date.now(), timeZone) => dayKey(now + GENERATE_AHEAD_MS, timeZone);
+
 // Mercados soportados: línea de goles y mínimo de goles para acertar.
 export const MARKETS = Object.freeze({ OVER_1_5: { line: 1.5, goals: 2 }, OVER_2_5: { line: 2.5, goals: 3 }, OVER_3_5: { line: 3.5, goals: 4 } });
 // Ligas medidas con mal acierto en ese mercado (backtest): no entran en tickets.
@@ -37,7 +42,7 @@ export function dreamerTicket(fixtures, history, { now, usedIds, number }) {
 }
 
 export function generateBatch(snapshot, { now = Date.now(), timeZone, minProbability = 0.65, mode = 'live', excludedIds = [],
-  market = 'OVER_2_5', legs = 3, evidence = null, maxTickets = 4, dreamer = false } = {}) {
+  market = 'OVER_2_5', legs = 3, evidence = null, maxTickets = 4, dreamer = false, day = null } = {}) {
   if (!Number.isFinite(minProbability) || minProbability < 0.5 || minProbability > 0.95) throw new Error('Umbral inválido');
   if (!MARKETS[market] || ![3, 4, 6].includes(legs)) throw new Error('Mercado o tamaño de ticket inválido');
   if (!Number.isInteger(maxTickets) || maxTickets < 1 || maxTickets > 4) throw new Error('Número de tickets inválido');
@@ -78,7 +83,7 @@ export function generateBatch(snapshot, { now = Date.now(), timeZone, minProbabi
   const extra = dreamer ? dreamerTicket(window, snapshot.history, {
     now, number: tickets.length + 1, usedIds: tickets.flatMap(t => t.selections.map(x => x.match.id)) }) : null;
   return {
-    id: randomUUID(), day: dayKey(now, timeZone), mode,
+    id: randomUUID(), day: day ?? dayKey(now, timeZone), mode,
     createdAt: new Date(now).toISOString(), sourceUpdatedAt: snapshot.fetchedAt,
     source: snapshot.source, modelVersion: MODEL_VERSION, minProbability, market, line, legs, maxTickets,
     // La evidencia solo describe al modelo con el mismo mercado y umbral con que se midió.
