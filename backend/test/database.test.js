@@ -52,15 +52,17 @@ test('PostgreSQL crea avisos solo con todos los aciertos y resiste tareas repeti
   const { rows: [stored] } = await db.query('select payload from public.batches limit 1');
   const batch = stored.payload, ticket = batch.tickets[0];
   await db.query('select public.subscribe_device($1,$2,$3,$4)', [userA, batch.id, 'test-device-token-123456789', 'android']);
+  // userB tiene avisos activos pero no abrió la app ese día (sin suscripción a la tanda).
+  await db.query("insert into public.devices(token,user_id,platform) values ('other-device-token-12345678',$1,'android')", [userB]);
   const wins = ticket.selections.map(s => ({ matchId: s.match.id, result: 'won', score: '2–1' }));
   await db.query('select public.apply_results($1)', [JSON.stringify(wins.slice(0, -1))]);
   assert.equal((await db.query('select count(*)::int n from public.notification_outbox')).rows[0].n, 0);
   await db.query('select public.apply_results($1)', [JSON.stringify(wins)]);
   await db.query('select public.apply_results($1)', [JSON.stringify(wins)]);
   assert.equal((await db.query('select status from public.tickets where id=$1', [ticket.id])).rows[0].status, 'won');
-  assert.equal((await db.query('select count(*)::int n from public.notification_outbox')).rows[0].n, 1);
+  assert.deepEqual((await db.query('select user_id from public.notification_outbox order by user_id')).rows.map(r => r.user_id), [userA, userB]);
   const claimed = await db.query('select * from public.claim_notifications()');
-  assert.equal(claimed.rows.length, 1);
+  assert.equal(claimed.rows.length, 2);
   assert.equal((await db.query('select * from public.claim_notifications()')).rows.length, 0);
 });
 test('guardar es idempotente, no activa avisos y rechaza tandas inexistentes', async () => {

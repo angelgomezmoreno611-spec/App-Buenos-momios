@@ -752,3 +752,18 @@ No se dejaron servidores activos ni se desplegó el proyecto.
   de 200 (se reinicia 00:00 UTC). Corregido: storeFcMatches deduplica (gana el
   FINISHED), get se detiene con ≤5 consultas restantes, el job no sigue sin
   catálogo. 87/87. Primera carga: cron 03:08 UTC del 17.
+- 2026-11-17: el usuario pide aviso al ganar un ticket e icono de la app.
+  Comprobado: el servidor ya encolaba avisos al liquidar ("won" → `notification_outbox`)
+  pero nunca llegaban: Firebase sin configurar (Android y Vercel), job notify sin
+  programar y aviso solo a suscritos de esa tanda (abrir la app ese día).
+  Hecho: migración 015 (avisa a todo teléfono en `devices` = avisos activos; crea
+  cron `momios-notify` :07/:22/:37/:52), texto del aviso genérico (antes decía
+  "4 selecciones… 2.5"), plugin google-services en Gradle solo si existe
+  `mobile/android/app/google-services.json` (ignorado por Git), release-apk.sh pasa
+  `ENABLE_PUSH=true` solo con ese archivo, icono nuevo (balón lima sobre fondo
+  oscuro; adaptativo, legacy, web e `ic_notification` para la barra de estado).
+  Verificado: 87/87 backend, `db push --dry-run` muestra solo 015, APK release compila.
+  PENDIENTE (usuario): aplicar 015 en producción; crear proyecto Firebase, app
+  Android `com.buenosmomios.buenos_momios`, bajar google-services.json; cuenta de
+  servicio → `FIREBASE_SERVICE_ACCOUNT_JSON` en Vercel; publicar APK y pulsar la
+  campana "Activar avisos" una vez. No se ha comprobado ningún envío real.

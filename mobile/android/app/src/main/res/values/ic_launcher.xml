@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="ic_launcher_background">#0C1117</color>
+    <!-- Color de acento del icono de notificación (lima de la app). -->
+    <color name="notification_accent">#C4F566</color>
+</resources>

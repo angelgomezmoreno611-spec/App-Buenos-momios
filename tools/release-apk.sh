@@ -21,9 +21,15 @@ build=$(( ${last:-1} + 1 ))
 name=$(sed -n 's/^version: *\([0-9.]*\).*/\1/p' pubspec.yaml)
 echo "Compilando versión $name ($build)…"
 
+# Avisos push solo si está la configuración de Firebase (ignorada por Git).
+push=false
+if [[ -f android/app/google-services.json ]]; then push=true; else
+  echo "Aviso: sin android/app/google-services.json el APK no tendrá notificaciones." >&2
+fi
+
 "$flutter" build apk --release --target-platform android-arm64 \
   --build-name="$name" --build-number="$build" \
-  --dart-define-from-file=config.local.json --dart-define=APP_BUILD="$build"
+  --dart-define-from-file=config.local.json --dart-define=APP_BUILD="$build" --dart-define=ENABLE_PUSH="$push"
 
 apk=build/app/outputs/flutter-apk/app-release.apk
 out="build/buenos-momios-v$build.apk"

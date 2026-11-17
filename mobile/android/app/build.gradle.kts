@@ -5,6 +5,12 @@ plugins {
     id("dev.flutter.flutter-gradle-plugin")
 }
 
+// Avisos push: el archivo se descarga de la consola de Firebase (no va a Git).
+// Sin él, el APK compila igual y la app funciona sin notificaciones.
+if (file("google-services.json").exists()) {
+    apply(plugin = "com.google.gms.google-services")
+}
+
 android {
     namespace = "com.buenosmomios.buenos_momios"
     compileSdk = flutter.compileSdkVersion

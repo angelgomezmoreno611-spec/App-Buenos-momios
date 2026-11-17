@@ -32,7 +32,7 @@ export class FirebasePush {
       method: 'POST', headers: { Authorization: `Bearer ${await this.accessToken()}`, 'Content-Type': 'application/json' },
       body: JSON.stringify({ message: {
         token: event.token,
-        notification: { title: '¡Ticket acertado!', body: `Las 4 selecciones del ticket ${event.ticket_id.slice(0, 8)} superaron 2.5 goles.` },
+        notification: { title: '¡Ticket ganado! 🎉', body: 'Todas las selecciones de tu ticket se cumplieron. Toca para verlo.' },
         data: { ticketId: event.ticket_id, eventId: event.id, batchId: event.batch_id },
         android: { priority: 'high', notification: { tag: event.ticket_id } },
         apns: { headers: { 'apns-collapse-id': event.ticket_id } }
