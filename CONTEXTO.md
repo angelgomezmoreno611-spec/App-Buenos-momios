@@ -767,3 +767,9 @@ No se dejaron servidores activos ni se desplegó el proyecto.
   Android `com.buenosmomios.buenos_momios`, bajar google-services.json; cuenta de
   servicio → `FIREBASE_SERVICE_ACCOUNT_JSON` en Vercel; publicar APK y pulsar la
   campana "Activar avisos" una vez. No se ha comprobado ningún envío real.
+  Hecho después (con confirmación del usuario): google-services.json copiado
+  (ignorado), cuenta de servicio en `backend/.env` y Vercel Production
+  (`FIREBASE_SERVICE_ACCOUNT_JSON`; token OAuth de Google comprobado), 015 aplicada
+  en producción, commit cf5b3ed desplegado (`/api/jobs/notify` → {"sent":0,"failed":0},
+  ya no disabled) y release app-v5 con APK (18.7 MB; la subida a GitHub se congeló
+  varias veces). Pendiente: instalar v5, activar la campana y ver el primer aviso real.
