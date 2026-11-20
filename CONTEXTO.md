@@ -792,8 +792,10 @@ No se dejaron servidores activos ni se desplegó el proyecto.
   App: avisos activados automáticamente la primera vez (pide permiso), rango "Del dd/mm
   al dd/mm" en la tanda. Verificado: backend 95/95, flutter analyze sin problemas,
   flutter test 19/19 (una prueba de pantalla necesitó `ensureVisible`).
-  PENDIENTE: aplicar 016 en producción (confirmación del usuario), commit + push
-  (Vercel despliega), publicar APK v6 e instalarlo; abrir la app y aceptar el permiso;
-  comprobar que `devices` tenga un registro y que llegue el aviso de las 23:45.
+  Hecho después (con confirmación del usuario): 016 aplicada en producción, commit
+  7a773f1 en main (Vercel Production "Ready"), release app-v6 publicado con APK (la
+  subida se congeló 3 veces; se subió a mano con `gh release upload`).
+  PENDIENTE (usuario): instalar v6 con "Actualizar", abrir la app y aceptar el permiso.
+  Luego comprobar que `devices` tenga un registro y que llegue el aviso de las 23:45.
   Supuesto: la API-Football solo da partidos hasta mañana, así que los partidos de días
   3–7 vienen de football-data.org, CSV, OpenLigaDB y Football Charts.
