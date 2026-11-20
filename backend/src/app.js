@@ -1,6 +1,6 @@
 import { timingSafeEqual } from 'node:crypto';
 import { demoBatch } from './demo.js';
-import { dayKey, batchDay } from './tickets.js';
+import { dayKey } from './tickets.js';
 import { runJob } from './jobs.js';
 import { runDiscover } from './discover.js';
 import { FootballService } from './football/service.js';
@@ -25,7 +25,7 @@ async function readJson(req) {
   catch { throw Object.assign(new Error('JSON inválido'), { status: 400 }); }
 }
 
-export function createApp({ mode = 'live', repo, provider, push, cronSecret, timeZone = 'America/Mazatlan', minProbability = 0.65, allowedOrigin, footballService, csvLeagues = [], market = 'OVER_2_5', legs = 3, maxTickets = 4, evidence = null, openLiga = null, dreamer = false, sameDay = false, ticketThresholds = null, backupOnly = [], fc = null, apiFootball = null }) {
+export function createApp({ mode = 'live', repo, provider, push, cronSecret, timeZone = 'America/Mazatlan', minProbability = 0.65, allowedOrigin, footballService, csvLeagues = [], market = 'OVER_2_5', legs = 3, maxTickets = 4, evidence = null, openLiga = null, dreamer = false, sameDay = false, days = sameDay ? 1 : null, ticketThresholds = null, backupOnly = [], fc = null, apiFootball = null }) {
   if (!['live', 'demo'].includes(mode)) throw new Error('DATA_MODE debe ser live o demo');
   let demo;
   const send = (res, status, value) => { res.statusCode = status; res.end(JSON.stringify(value)); };
@@ -49,7 +49,7 @@ export function createApp({ mode = 'live', repo, provider, push, cronSecret, tim
         if (mode === 'demo') return send(res, 409, { error: 'Las tareas reales están desactivadas en demo' });
         // discover usa otra fuente y otras tablas: no toma el lock compartido.
         if (kind === 'discover') return send(res, 200, await runDiscover({ repo, key: apiFootball?.key, fetcher: apiFootball?.fetcher, timeZone }));
-        return send(res, 200, await runJob(kind, { repo, provider, push, timeZone, minProbability, csvLeagues, market, legs, maxTickets, evidence, openLiga, dreamer, sameDay, ticketThresholds, backupOnly, fc, afEnabled: Boolean(apiFootball?.key) }));
+        return send(res, 200, await runJob(kind, { repo, provider, push, timeZone, minProbability, csvLeagues, market, legs, maxTickets, evidence, openLiga, dreamer, days, ticketThresholds, backupOnly, fc, afEnabled: Boolean(apiFootball?.key) }));
       }
       const footballRoute = ['/api/football/sources', '/api/football/matches', '/api/football/match'].includes(path);
       if (!footballRoute && !['/api/tickets', '/api/history', '/api/subscriptions', '/api/devices'].includes(path)) return send(res, 404, { error: 'Ruta no encontrada' });
@@ -71,11 +71,10 @@ export function createApp({ mode = 'live', repo, provider, push, cronSecret, tim
           if (!demo || demo.day !== dayKey()) demo = demoBatch();
           batch = demo;
         } else {
-          // De 23:40 a 00:00 se muestra la tanda de mañana si ya se generó.
-          const now = Date.now(), next = batchDay(now, timeZone), today = dayKey(now, timeZone);
-          batch = await repo.getBatch(next) ?? (next !== today ? await repo.getBatch(today) : null);
+          // La tanda más reciente: sigue en juego varios días hasta que se resuelven sus tickets.
+          batch = await repo.latestBatch();
         }
-        return send(res, 200, { batch, message: batch ? null : 'Todavía no se ha publicado el análisis de hoy.' });
+        return send(res, 200, { batch, message: batch ? null : 'Todavía no se ha publicado ninguna tanda de tickets.' });
       }
       if (path === '/api/history' && req.method === 'GET') {
         if (mode === 'demo') return send(res, 200, { batches: [] });

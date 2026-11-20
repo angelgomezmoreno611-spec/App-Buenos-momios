@@ -45,6 +45,15 @@ export class SupabaseRepository {
     return batch;
   }
   async publish(batch) { return this.rpc('publish_batch', { p_batch: batch }); }
+  // Tanda más reciente (la que sigue en juego o la última resuelta).
+  async latestBatch() {
+    const rows = await this.request('batches?select=day&order=day.desc&limit=1');
+    return rows.length ? this.getBatch(rows[0].day) : null;
+  }
+  // Aviso para todos los teléfonos con avisos activos; `key` evita repetirlo.
+  async enqueueNotice(key, batchId, { title, body }) {
+    return this.rpc('enqueue_notice', { p_key: key, p_batch_id: batchId, p_title: title, p_body: body });
+  }
   async saveBatch(userId, batchId) {
     return this.rpc('save_batch', { p_user_id: userId, p_batch_id: batchId });
   }

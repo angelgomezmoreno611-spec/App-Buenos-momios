@@ -22,6 +22,8 @@ class PushService {
   String? _batchId;
   String? _token;
   bool _active = false;
+  // Primera vez (nunca se activaron ni desactivaron): se activan solos al cargar.
+  bool _auto = false;
   bool get active => _active;
 
   Future<void> initialize() async {
@@ -29,7 +31,9 @@ class PushService {
     if (Firebase.apps.isEmpty) await Firebase.initializeApp();
     FirebaseMessaging.onBackgroundMessage(backgroundMessage);
     final preferences = await SharedPreferences.getInstance();
-    _active = preferences.getBool('alertsEnabled') ?? false;
+    final saved = preferences.getBool('alertsEnabled');
+    _active = saved ?? false;
+    _auto = saved == null;
     _refresh = FirebaseMessaging.instance.onTokenRefresh.listen((token) async {
       _token = token;
       if (_active && _batchId != null) {
@@ -44,7 +48,22 @@ class PushService {
 
   Future<void> follow(String batchId) async {
     _batchId = batchId;
-    if (!_active || Api.demo || !enabled || !supported) return;
+    if (Api.demo || !enabled || !supported) return;
+    if (_auto) {
+      // Sin tocar la campana: pide permiso una vez y registra el teléfono. Si se
+      // niega, queda desactivado y la campana permite activarlo después.
+      _auto = false;
+      try {
+        await activate(batchId);
+      } catch (_) {
+        await (await SharedPreferences.getInstance()).setBool(
+          'alertsEnabled',
+          false,
+        );
+      }
+      return;
+    }
+    if (!_active) return;
     final token = await FirebaseMessaging.instance.getToken();
     if (token == null) {
       throw Exception('El teléfono aún no tiene token de notificaciones.');

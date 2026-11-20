@@ -28,14 +28,19 @@ export class FirebasePush {
   }
   async send(event) {
     if (!this.configured) throw new Error('Firebase no configurado');
+    // Un aviso por ticket ganado; los diarios se reemplazan entre sí ("momios-estado").
+    const tag = event.ticket_id ?? 'momios-estado';
     const response = await this.fetcher(`https://fcm.googleapis.com/v1/projects/${this.account.project_id}/messages:send`, {
       method: 'POST', headers: { Authorization: `Bearer ${await this.accessToken()}`, 'Content-Type': 'application/json' },
       body: JSON.stringify({ message: {
         token: event.token,
-        notification: { title: '¡Ticket ganado! 🎉', body: 'Todas las selecciones de tu ticket se cumplieron. Toca para verlo.' },
-        data: { ticketId: event.ticket_id, eventId: event.id, batchId: event.batch_id },
-        android: { priority: 'high', notification: { tag: event.ticket_id } },
-        apns: { headers: { 'apns-collapse-id': event.ticket_id } }
+        notification: event.title ? { title: event.title, body: event.body ?? '' }
+          : { title: '¡Ticket ganado! 🎉', body: 'Todas las selecciones de tu ticket se cumplieron. Toca para verlo.' },
+        // FCM solo acepta textos en `data`: los avisos diarios no tienen ticket.
+        data: Object.fromEntries(Object.entries({ ticketId: event.ticket_id, eventId: event.id, batchId: event.batch_id })
+          .filter(([, v]) => v)),
+        android: { priority: 'high', notification: { tag: tag } },
+        apns: { headers: { 'apns-collapse-id': tag } }
       } }), signal: AbortSignal.timeout(4000)
     });
     if (response.ok) return 'sent';

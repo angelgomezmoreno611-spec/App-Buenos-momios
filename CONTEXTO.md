@@ -1,6 +1,6 @@
 # Contexto de Buenos Momios
 
-Última actualización: 2026-11-06 (America/Mazatlan).
+Última actualización: 2026-11-20 (America/Mazatlan).
 
 ## Instrucción permanente del usuario
 
@@ -773,3 +773,27 @@ No se dejaron servidores activos ni se desplegó el proyecto.
   en producción, commit cf5b3ed desplegado (`/api/jobs/notify` → {"sent":0,"failed":0},
   ya no disabled) y release app-v5 con APK (18.7 MB; la subida a GitHub se congeló
   varias veces). Pendiente: instalar v5, activar la campana y ver el primer aviso real.
+- 2026-11-20: el usuario pide umbral 0.67 (no bajarlo), tickets de 1 a 7 días, aviso
+  diario a las 23:45 con los tickets que siguen activos, tickets nuevos cuando ya no
+  quede ninguno activo (eligió esa opción; también si alguno ganó) con aviso "Tus nuevos
+  tickets ya están listos", y reporta que no le llega el aviso de ticket ganado.
+  Diagnóstico comprobado (consulta de solo lectura a producción): `devices` vacía (ningún
+  teléfono registrado) y `notification_outbox` vacía, aunque hubo tickets ganados el
+  16 y 17. El servidor sí marcaba "won"; no había a quién enviarlo. Causa probable: la
+  app solo registra el teléfono al pulsar la campana (o falló al hacerlo).
+  Hecho (sin commit ni despliegue todavía): umbral por defecto 0.67,0.67,0.67 (respaldo
+  over 1.5 ≥ √0.67 ≈ 0.82; La soñadora sigue en 0.60); `TICKET_DAYS` (1–7, por defecto 7)
+  reemplaza a `TICKET_SAME_DAY`; generate conserva la tanda mientras tenga tickets
+  activos (`activeTickets`: pendiente/revisión con último partido hace <4 días) y solo
+  encola/envía el estado (`status:<día>`); si no queda ninguno, crea la tanda y avisa
+  (`new:<id>`). Los avisos se envían en la misma ejecución de las 23:45. Migración 016
+  (`notification_outbox`: ticket_id opcional, title/body/dedupe_key, función
+  `enqueue_notice`). `/api/tickets` devuelve la tanda más reciente (`latestBatch`).
+  App: avisos activados automáticamente la primera vez (pide permiso), rango "Del dd/mm
+  al dd/mm" en la tanda. Verificado: backend 95/95, flutter analyze sin problemas,
+  flutter test 19/19 (una prueba de pantalla necesitó `ensureVisible`).
+  PENDIENTE: aplicar 016 en producción (confirmación del usuario), commit + push
+  (Vercel despliega), publicar APK v6 e instalarlo; abrir la app y aceptar el permiso;
+  comprobar que `devices` tenga un registro y que llegue el aviso de las 23:45.
+  Supuesto: la API-Football solo da partidos hasta mañana, así que los partidos de días
+  3–7 vienen de football-data.org, CSV, OpenLigaDB y Football Charts.

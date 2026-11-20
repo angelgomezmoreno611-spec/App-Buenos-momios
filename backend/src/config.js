@@ -20,18 +20,21 @@ export function configuredApp(env = process.env) {
   };
   if (mode === 'demo') return createApp(common);
   if (!env.CRON_SECRET || env.CRON_SECRET.length < 32) throw new Error('CRON_SECRET requiere mínimo 32 caracteres');
-  // Mercado, tamaño y número de tickets. Por defecto: 3 tickets over 2.5 de 3 partidos (umbral 0.65).
+  // Mercado, tamaño y número de tickets. Por defecto: 3 tickets over 2.5 de 3 partidos (umbral 0.67).
   const market = env.TICKET_MARKET?.trim() || 'OVER_2_5', legs = Number(env.TICKET_LEGS ?? 3);
   const maxTickets = Number(env.TICKET_COUNT ?? 3);
   if (!MARKETS[market] || ![3, 4, 6].includes(legs)) throw new Error('TICKET_MARKET o TICKET_LEGS inválidos');
   if (!Number.isInteger(maxTickets) || maxTickets < 1 || maxTickets > 4) throw new Error('TICKET_COUNT debe estar entre 1 y 4');
-  // Over 2.5: tickets escalonados, umbral por ticket (TICKET_THRESHOLDS="0.65,0.63,0.62").
-  const thresholdList = env.TICKET_THRESHOLDS?.trim() || (market === 'OVER_2_5' && !env.MIN_PROBABILITY ? '0.65,0.63,0.62' : '');
+  // Over 2.5: umbral por ticket (TICKET_THRESHOLDS, p. ej. "0.67,0.65,0.63" para escalonar).
+  const thresholdList = env.TICKET_THRESHOLDS?.trim() || (market === 'OVER_2_5' && !env.MIN_PROBABILITY ? '0.67,0.67,0.67' : '');
   const ticketThresholds = thresholdList ? thresholdList.split(',').map(Number) : null;
   if (ticketThresholds && (ticketThresholds.length < 1 || ticketThresholds.length > 4 || ticketThresholds.some(t => !(t >= 0.5 && t <= 0.95)))) {
     throw new Error('TICKET_THRESHOLDS debe tener de 1 a 4 umbrales entre 0.5 y 0.95');
   }
-  const minProbability = ticketThresholds?.[0] ?? Number(env.MIN_PROBABILITY ?? (market === 'OVER_1_5' ? 0.8 : 0.65));
+  const minProbability = ticketThresholds?.[0] ?? Number(env.MIN_PROBABILITY ?? (market === 'OVER_1_5' ? 0.8 : 0.67));
+  // Días que abarca una tanda (1 = solo el día de la tanda; 7 = una semana).
+  const days = Number(env.TICKET_DAYS ?? 7);
+  if (!Number.isInteger(days) || days < 1 || days > 7) throw new Error('TICKET_DAYS debe estar entre 1 y 7');
   // Ligas de football-data.co.uk (CSV): "none" las desactiva.
   // En over 2.5 también se cargan las ligas validadas solo en over 1.5, pero únicamente
   // como respaldo over 1.5 (`backupOnly`): nunca entran como over 2.5.
@@ -78,8 +81,8 @@ export function configuredApp(env = process.env) {
     maxTickets: ticketThresholds?.length ?? maxTickets,
     // Ticket "La soñadora" (6 over 2.5): TICKET_DREAMER=false lo apaga.
     dreamer: env.TICKET_DREAMER?.trim() !== 'false',
-    // Solo partidos del día de la tanda (hora local); TICKET_SAME_DAY=false vuelve a 72 h.
-    sameDay: env.TICKET_SAME_DAY?.trim() !== 'false',
+    // Partidos de los próximos `days` días (hora local); la tanda sigue hasta resolverse.
+    days,
     // Descubrimiento de partidos con API-Football (plan gratuito); AF_DISCOVERY=false lo apaga.
     apiFootball: env.API_FOOTBALL_KEY?.trim() && env.AF_DISCOVERY?.trim() !== 'false' ? { key: env.API_FOOTBALL_KEY.trim() } : null, evidence: EVIDENCE[market] ?? null,
     repo: new SupabaseRepository({ url: env.SUPABASE_URL,

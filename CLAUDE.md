@@ -5,7 +5,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## Reglas del proyecto (de AGENTS.md)
 
 - Antes de cada bloque de trabajo, leer `CONTEXTO.md` (estado verificado, decisiones,
-  pendientes y próximo paso). Actualizarlo al terminar cada bloque, en español,
+  pendientes y próximo paso) y `TAREAS.md` (lista de tareas en curso con bitácora). Actualizarlo al terminar cada bloque, en español,
   distinguiendo lo comprobado de lo supuesto. Nunca escribir credenciales en él.
 - **Laptop con poca RAM**: un solo proceso pesado a la vez (pruebas, análisis o
   compilación); no usar agentes paralelos ni emuladores Android por defecto.
@@ -46,6 +46,9 @@ npm run import:openfootball               # descarga ~10.7k partidos CC0 a data/
 npm run backtest -- data/openfootball.json # evaluar el modelo con ese histórico
 npm run calibrate -- data/openfootball.json [AAAA-MM-DD] # ajustar Platt y validar tras la fecha
 npm run tune -- data/openfootball.json [AAAA-MM-DD val] [AAAA-MM-DD prueba] # búsqueda de parámetros con validación temporal
+npm run backtest:form -- data/openfootball.json [--test=AAAA-MM-DD] # backtest del modelo de forma (formPredict)
+npm run import:csv -- D2,F2 [temporadas]   # descarga única de CSV football-data.co.uk para backtest (cuenta para la política de descargas)
+npm run import:fc -- brazil2,korea1|all    # Football Charts para backtest (gasta cuota diaria; reanudable en data/fc/)
 ```
 
 Mobile (`cd mobile`):
@@ -66,10 +69,10 @@ clave debug de firma y número de versión creciente).
 
 ## Arquitectura
 
-Producto: **3 tickets over 2.5 de 3 partidos, escalonados** (umbral por partido 0.65 /
-0.63 / 0.62, `TICKET_THRESHOLDS`; si un nivel no se llena, sus partidos bajan al
-siguiente; cada over 2.5 que falte se cambia por 2 over 1.5 con ≥ √umbral, de
-los partidos que no son candidatos a over 2.5) por día, sin repetir
+Producto: **3 tickets over 2.5 de 3 partidos** (umbral por partido 0.67 en los tres,
+`TICKET_THRESHOLDS` admite escalonar, p. ej. "0.67,0.65,0.63"; si un nivel no se llena,
+sus partidos bajan al siguiente; cada over 2.5 que falte se cambia por 2 over 1.5 con ≥ √umbral, de
+los partidos que no son candidatos a over 2.5) por tanda, sin repetir
 partidos (`TICKET_COUNT`, `TICKET_MARKET`, `TICKET_LEGS` = 3, 4 o 6; over 1.5 con 6 partidos y
 umbral 0.80 sigue disponible y ahí se excluyen LaLiga y Serie A, `MARKET_BLOCKED`).
 Además, el ticket especial **"La soñadora"** (`dreamerTicket`, `kind: 'dreamer'`):
@@ -79,8 +82,13 @@ apaga. Requiere migración 008; si la base lo rechaza, la tanda se publica sin �
 "El arriesgado del día" (`kind: 'risky'`) ya no se genera, pero la base y la app
 siguen leyendo tandas antiguas con él. La API liquida según el mercado de cada
 selección y el tamaño (`legs`) de cada ticket.
-Solo entran partidos del día de la tanda en hora de Mazatlán (`TICKET_SAME_DAY=false`
-vuelve a la ventana de 72 h; la demo usa 72 h).
+**Tandas de varios días**: entran partidos de los `TICKET_DAYS` (1–7, por defecto 7) días
+locales desde el día de la tanda (la demo usa 72 h). La tanda sigue en juego mientras le
+quede un ticket activo (`activeTickets`: pendiente/revisión y último partido hace <4 días);
+`/api/tickets` devuelve la más reciente (`latestBatch`). Cada noche generate (23:45)
+envía a todos los teléfonos el estado ("Siguen activos: ticket 1 y 3…", clave
+`status:<día>`) o, si ya no queda ningún ticket activo, crea la tanda nueva y avisa
+"Tus nuevos tickets ya están listos" (`new:<id>`); los envía en la misma ejecución.
 
 **Backend** (`backend/`, Node ESM sin framework, sin dependencias de runtime):
 - `src/config.js` → `configuredApp(env)` es el único punto de cableado: según
@@ -98,8 +106,10 @@ vuelve a la ventana de 72 h; la demo usa 72 h).
   `push.js` (Firebase, opcional). `demo.js` genera datos sintéticos.
 - Los jobs **no** se programan en Vercel: los dispara pg_cron + pg_net desde
   Supabase (URL y secreto en Vault), según `supabase/schedule.example.sql`. Los
-  cambios de horario los aplica el usuario en Supabase (`cron.alter_job`); generate
-  corre a las 00:01 de Mazatlán (UTC-7) para que `dayKey` ya sea el día nuevo.
+  cambios de horario van como migración (010, 011, 014 usan `cron.schedule`, que no
+  hace nada sin pg_cron, p. ej. en PGlite). generate corre a las 23:45 de Mazatlán
+  (UTC-7; desde las 23:40 el backend ya usa la fecha de mañana, `tickets.js`) y la
+  de las 00:01 queda como respaldo sin duplicar.
 - Rutas de usuario (`/api/tickets`, `/api/history`, `/api/subscriptions`,
   `/api/devices`, `/api/football/*`) verifican la sesión contra Supabase Auth.
 - `src/csvleagues.js`: ligas extra desde CSV de football-data.co.uk (sin API). Su
@@ -114,13 +124,13 @@ vuelve a la ventana de 72 h; la demo usa 72 h).
   pendiente (IDs `oldb-`, máx. 10 por ejecución). Fallos no detienen la tanda.
 - `src/apifootball.js` + `src/discover.js`: descubrimiento con API-Football gratis
   (solo ayer/hoy/mañana, 100 consultas/día, 10/min). Job `discover` (sin lock, cada
-  5 min de 05:00 a 06:55 UTC): listas del día → `af_matches` (migración 007), luego
+  5 min de 04:00 a 05:55 UTC, migración 011): listas del día → `af_matches` (migración 007), luego
   "predictions" de partidos de ligas NO cubiertas (prioriza ligas goleadoras por
   `af_league_rates`). generate usa `formPredict` (temporada casa/fuera + últimos 5)
   con umbral `FORM_MIN`; settle lee el resultado de la lista de "ayer". Si un
   partido no tiene análisis, generate calcula la forma con los resultados guardados
   (`featuresFromHistory`) y discover no gasta consulta en él; discover solo analiza
-  partidos del día de la próxima tanda. IDs `af-`. `AF_DISCOVERY=false` lo apaga. Uso diario en `af_usage`.
+  partidos del día de la próxima tanda (desde las 19:00 locales, los de mañana). IDs `af-`. `AF_DISCOVERY=false` lo apaga. Uso diario en `af_usage`.
 - `src/footballcharts.js`: Football Charts (clave gratis `FOOTBALL_CHARTS_KEY`, 200/día,
   uso personal con atribución). Job `fc` (migración 014, 2 veces al día, ≤10 ligas por
   vuelta, tabla `fc_matches` de la 013); generate calcula la forma con sus resultados
@@ -140,7 +150,10 @@ vuelve a la ventana de 72 h; la demo usa 72 h).
 **Base de datos** (`supabase/migrations/`, aplicar en orden; 009 admite 3, 4 o 6
 partidos; 005 añadió OVER_1_5/OVER_2_5): RLS por usuario;
 `saved_batches` (002) guarda tandas vía RPC idempotente y las escrituras pasan por
-la API. Las pruebas usan PGlite (PostgreSQL embebido), sin Supabase real.
+la API. `apply_results` (015) avisa de tickets ganados a todos los teléfonos en
+`devices` (un registro existe solo mientras los avisos están activos); `enqueue_notice`
+(016) encola avisos con título/texto propios, sin ticket, deduplicados por
+`(token, dedupe_key)`. La app activa los avisos sola la primera vez que carga una tanda. Las pruebas usan PGlite (PostgreSQL embebido), sin Supabase real.
 
 **Mobile** (`mobile/lib/`, Flutter): `main.dart` inicializa Supabase una sola vez y
 todo usa `Supabase.instance.client`. `api.dart` es el cliente HTTP compartido

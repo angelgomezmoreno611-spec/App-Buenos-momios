@@ -56,6 +56,9 @@ void main() {
     await tester.pumpWidget(const BuenosMomiosApp());
     await tester.pumpAndSettle();
     await tester.scrollUntilVisible(find.text('Guardar tanda'), 200);
+    // Centra el botón: al borde de la lista puede quedar bajo la barra inferior.
+    await tester.ensureVisible(find.text('Guardar tanda'));
+    await tester.pumpAndSettle();
     await tester.tap(find.text('Guardar tanda'));
     await tester.pumpAndSettle();
     expect(find.text('Tanda guardada'), findsOneWidget);

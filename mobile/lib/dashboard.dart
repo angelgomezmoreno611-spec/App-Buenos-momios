@@ -148,6 +148,7 @@ class _DashboardState extends State<Dashboard> with WidgetsBindingObserver {
       if (batch != null) {
         try {
           await _push.follow(batch.id);
+          if (mounted) setState(() {}); // la campana refleja el registro automático
         } catch (_) {
           _notice(
             'No se pudo actualizar el registro de avisos. Vuelve a intentarlo.',
@@ -627,7 +628,7 @@ class _DashboardState extends State<Dashboard> with WidgetsBindingObserver {
         ),
         if (_batch != null)
           Text(
-            '${_batch!.day} · ${_batch!.uniqueMatches} partidos únicos',
+            '${_batch!.dayLabel} · ${_batch!.uniqueMatches} partidos únicos',
             style: const TextStyle(color: muted, fontSize: 12),
           ),
         const SizedBox(height: 18),
@@ -662,7 +663,7 @@ class _DashboardState extends State<Dashboard> with WidgetsBindingObserver {
         ],
         if (_batch == null && !_loading && _error == null)
           const Notice(
-            'Todavía no se ha publicado el análisis de hoy. Actualiza más tarde.',
+            'Todavía no se ha publicado ninguna tanda de tickets. Actualiza más tarde.',
             icon: Icons.hourglass_empty,
           ),
         if (_batch != null) ...[

@@ -1,4 +1,4 @@
-import { generateBatch, batchDay, resultOf, DREAMER } from './tickets.js';
+import { generateBatch, batchDay, resultOf, DREAMER, activeTickets, statusNotice, newBatchNotice } from './tickets.js';
 import { deliverNotifications } from './push.js';
 import { lambdaFromOver15, featuresFromHistory } from './apifootball.js';
 import { syncCsv, CSV_LEAGUES, CSV_VALIDATION } from './csvleagues.js';
@@ -16,7 +16,7 @@ export function previousSeason(now = Date.now(), league = '') {
   return (d.getUTCMonth() >= 6 ? year : year - 1) - 1;
 }
 
-export async function runJob(kind, { repo, provider, push, timeZone, minProbability, csvLeagues, csvSync, market, legs, maxTickets, evidence, openLiga, dreamer, sameDay, ticketThresholds, backupOnly = [], fc = null, afEnabled, now = Date.now() }) {
+export async function runJob(kind, { repo, provider, push, timeZone, minProbability, csvLeagues, csvSync, market, legs, maxTickets, evidence, openLiga, dreamer, sameDay, days = sameDay ? 1 : null, ticketThresholds, backupOnly = [], fc = null, afEnabled, now = Date.now() }) {
   const owner = await repo.acquireLock();
   if (!owner) return { skipped: true, reason: 'Hay otra tarea ejecutándose o se está respetando el límite del proveedor' };
   const deadline = Date.now() + 45_000;
@@ -24,6 +24,22 @@ export async function runJob(kind, { repo, provider, push, timeZone, minProbabil
     if (kind === 'generate') {
       const day = batchDay(now, timeZone), existing = await repo.getBatch(day);
       if (existing) return { batchId: existing.id, existing: true };
+      // Avisos para todos los teléfonos; si fallan (p. ej. sin la migración 016) la
+      // tanda sigue igual. Se envían en esta misma ejecución para que lleguen a las 23:45.
+      const notify = async (key, batchId, notice) => {
+        try {
+          const queued = await repo.enqueueNotice?.(key, batchId, notice) ?? 0;
+          const delivery = queued && push?.configured ? await deliverNotifications(repo, push, deadline) : null;
+          return { queued, ...(delivery ? { sent: delivery.sent, failed: delivery.failed } : {}) };
+        } catch (error) { return { error: error.message }; }
+      };
+      // La tanda en juego se conserva mientras le quede algún ticket activo: solo se avisa su estado.
+      const latest = repo.latestBatch ? await repo.latestBatch() : null;
+      const active = activeTickets(latest, now);
+      if (active.length) {
+        return { batchId: latest.id, kept: true, active: active.map(t => t.number),
+          notice: await notify(`status:${day}`, latest.id, statusNotice(latest, now)) };
+      }
       const excludedIds = await repo.usedMatches(now);
       const snapshot = await provider.snapshot(now);
       // Temporadas anteriores guardadas: misma ventana de 400 días que usa model.js.
@@ -51,7 +67,7 @@ export async function runJob(kind, { repo, provider, push, timeZone, minProbabil
       if (afEnabled) {
         // Partidos con análisis de API-Football o, si no lo tienen, con forma calculada
         // por nosotros desde los resultados guardados (sin consultas).
-        const upcoming = await repo.afUpcoming(now, now + 72 * 3_600_000).catch(() => null);
+        const upcoming = await repo.afUpcoming(now, now + (days ? days + 1 : 3) * DAY).catch(() => null);
         const finished = upcoming?.length ? await Promise.resolve()
           .then(() => repo.afFinished(upcoming.map(m => m.league.afId), now - 400 * DAY)).catch(() => []) : [];
         const af = upcoming?.map(m => m.formFeatures ? m : { ...m, formFeatures: featuresFromHistory(m, finished) }) ?? null;
@@ -94,7 +110,7 @@ export async function runJob(kind, { repo, provider, push, timeZone, minProbabil
           if (upcoming.length) snapshot.warnings = [...(snapshot.warnings ?? []), FC_ATTRIBUTION];
         }
       }
-      const batch = generateBatch(snapshot, { now, timeZone, minProbability, excludedIds, market, legs, maxTickets, evidence, dreamer, day, sameDay,
+      const batch = generateBatch(snapshot, { now, timeZone, minProbability, excludedIds, market, legs, maxTickets, evidence, dreamer, day, days,
         ticketThresholds, backupOnly: [...backupOnly, ...fcBackup], blocked15: fcBlocked15 });
       let publishedId;
       try { publishedId = await repo.publish(batch); }
@@ -105,8 +121,10 @@ export async function runJob(kind, { repo, provider, push, timeZone, minProbabil
         batch.warnings = [...batch.warnings.filter(w => !w.startsWith(DREAMER.name)), `${DREAMER.name} no se pudo publicar en esta tanda.`];
         publishedId = await repo.publish(batch);
       }
+      // Solo se avisa una tanda que se acaba de crear (publish devuelve el id existente si ya había).
+      const notice = publishedId === batch.id ? await notify(`new:${batch.id}`, batch.id, newBatchNotice(batch, latest, timeZone)) : null;
       return { batchId: publishedId, tickets: batch.tickets.filter(t => t.kind !== 'dreamer').length,
-        dreamer: batch.tickets.some(t => t.kind === 'dreamer'), missingMatches: batch.missingMatches };
+        dreamer: batch.tickets.some(t => t.kind === 'dreamer'), missingMatches: batch.missingMatches, ...(notice ? { notice } : {}) };
     }
     if (kind === 'settle') {
       const pending = await repo.pendingMatches(now);

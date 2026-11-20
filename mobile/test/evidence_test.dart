@@ -158,4 +158,16 @@ void main() {
       isNull,
     );
   });
+
+  test('la tanda de varios días muestra su rango; las antiguas, solo su día', () {
+    expect(
+      Batch({'day': '2026-11-21', 'until': '2026-11-27'}).dayLabel,
+      'Del 21/11 al 27/11',
+    );
+    expect(Batch({'day': '2026-11-21'}).dayLabel, '21/11');
+    expect(
+      Batch({'day': '2026-11-21', 'until': '2026-11-21'}).dayLabel,
+      '21/11',
+    );
+  });
 }

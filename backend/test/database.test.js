@@ -65,6 +65,21 @@ test('PostgreSQL crea avisos solo con todos los aciertos y resiste tareas repeti
   assert.equal(claimed.rows.length, 2);
   assert.equal((await db.query('select * from public.claim_notifications()')).rows.length, 0);
 });
+test('avisos diarios (016): uno por teléfono y por clave, sin ticket', async () => {
+  const { rows: [{ id: batchId }] } = await db.query('select id from public.batches limit 1');
+  const enqueue = key => db.query('select public.enqueue_notice($1,$2,$3,$4) n', [key, batchId, 'Título', 'Texto']);
+  // Los dos teléfonos de la prueba anterior (userA y userB) ya están en devices.
+  assert.equal((await enqueue('status:2026-11-24')).rows[0].n, 2);
+  assert.equal((await enqueue('status:2026-11-24')).rows[0].n, 0); // generate de respaldo (00:01): sin repetir
+  assert.equal((await enqueue('status:2026-11-25')).rows[0].n, 2);
+  const { rows } = await db.query("select ticket_id, title, body from public.notification_outbox where dedupe_key like 'status:%'");
+  assert.equal(rows.length, 4);
+  assert.ok(rows.every(r => r.ticket_id === null && r.title === 'Título' && r.body === 'Texto'));
+  const claimed = await db.query('select * from public.claim_notifications()');
+  assert.ok(claimed.rows.some(r => r.title === 'Título'));
+  await db.query("delete from public.notification_outbox where dedupe_key is not null");
+});
+
 test('guardar es idempotente, no activa avisos y rechaza tandas inexistentes', async () => {
   const { rows: [batch] } = await db.query('select id from public.batches limit 1');
   const save = id => db.query('select public.save_batch($1,$2) saved', [userB, id]);

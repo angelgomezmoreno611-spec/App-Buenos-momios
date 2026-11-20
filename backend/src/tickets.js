@@ -24,7 +24,8 @@ export function dayStart(day, timeZone = 'America/Mazatlan') {
   const first = guess - zoneOffset(guess, timeZone);
   return guess - zoneOffset(first, timeZone); // segunda pasada por cambios de horario
 }
-export const nextDay = day => new Date(Date.parse(`${day}T12:00:00Z`) + 86_400_000).toISOString().slice(0, 10);
+export const addDays = (day, n) => new Date(Date.parse(`${day}T12:00:00Z`) + n * 86_400_000).toISOString().slice(0, 10);
+export const nextDay = day => addDays(day, 1);
 
 // La tanda del día siguiente se genera a las 23:45 (Mazatlán): desde 20 min antes
 // de medianoche, generate y /api/tickets ya usan la fecha de mañana.
@@ -74,7 +75,9 @@ export function dreamerTicket(fixtures, history, { now, usedIds, number, alt15 =
 }
 
 export function generateBatch(snapshot, { now = Date.now(), timeZone, minProbability = 0.65, mode = 'live', excludedIds = [],
-  market = 'OVER_2_5', legs = 3, evidence = null, maxTickets = 4, dreamer = false, day = null, sameDay = false, ticketThresholds = null, backupOnly = [], blocked15 = [] } = {}) {
+  market = 'OVER_2_5', legs = 3, evidence = null, maxTickets = 4, dreamer = false, day = null, sameDay = false, days = sameDay ? 1 : null,
+  ticketThresholds = null, backupOnly = [], blocked15 = [] } = {}) {
+  if (days !== null && !(Number.isInteger(days) && days >= 1 && days <= 7)) throw new Error('Días de la tanda inválidos');
   if (!Number.isFinite(minProbability) || minProbability < 0.5 || minProbability > 0.95) throw new Error('Umbral inválido');
   if (!MARKETS[market] || ![3, 4, 6].includes(legs)) throw new Error('Mercado o tamaño de ticket inválido');
   if (!Number.isInteger(maxTickets) || maxTickets < 1 || maxTickets > 4) throw new Error('Número de tickets inválido');
@@ -88,10 +91,10 @@ export function generateBatch(snapshot, { now = Date.now(), timeZone, minProbabi
   const age = now - Date.parse(snapshot.fetchedAt);
   if (!Number.isFinite(age) || age < -60_000 || age > 6 * 3_600_000) throw new Error('Datos desactualizados');
   const seen = new Set(excludedIds), candidates = [], rejections = [], window = [], alt15 = [];
-  // Ventana: solo partidos del día de la tanda (hora local) o, sin sameDay, 72 h.
+  // Ventana: `days` días locales desde el día de la tanda (1 = solo ese día) o, sin `days`, 72 h.
   const batchDate = day ?? dayKey(now, timeZone);
-  const from = Math.max(now + 3_600_000, sameDay ? dayStart(batchDate, timeZone) : -Infinity);
-  const until = sameDay ? dayStart(nextDay(batchDate), timeZone) : now + 72 * 3_600_000;
+  const from = Math.max(now + 3_600_000, days ? dayStart(batchDate, timeZone) : -Infinity);
+  const until = days ? dayStart(addDays(batchDate, days), timeZone) : now + 72 * 3_600_000;
   for (const f of snapshot.fixtures) {
     if (seen.has(f.id)) continue;
     seen.add(f.id);
@@ -167,7 +170,7 @@ export function generateBatch(snapshot, { now = Date.now(), timeZone, minProbabi
   const extra = dreamer ? dreamerTicket(window, snapshot.history, {
     now, number: tickets.length + 1, usedIds: [...usedIds], alt15: ticketThresholds && market === 'OVER_2_5' ? alt15 : null, backupOnly }) : null;
   return {
-    id: randomUUID(), day: batchDate, mode, sameDay,
+    id: randomUUID(), day: batchDate, mode, sameDay: days === 1, ...(days ? { days, until: addDays(batchDate, days - 1) } : {}),
     createdAt: new Date(now).toISOString(), sourceUpdatedAt: snapshot.fetchedAt,
     source: snapshot.source, modelVersion: MODEL_VERSION, minProbability, market, line, legs, maxTickets: tiers.length,
     ...(ticketThresholds ? { ticketThresholds: tiers } : {}),
@@ -183,7 +186,7 @@ export function generateBatch(snapshot, { now = Date.now(), timeZone, minProbabi
       'Sin cuotas actuales: no se calcula valor esperado ni rentabilidad.',
       ...([...tickets, ...(extra ? [extra] : [])].some(t => t.selections.some(x => x.prediction.modelVersion?.startsWith('form-af-v1'))) ? [FORM_EVIDENCE] : []),
       ...(tickets.some(t => t.selections.some(x => x.market === 'OVER_1_5') && market === 'OVER_2_5')
-        ? ['Respaldo over 1.5: si faltan over 2.5 en un ticket, cada uno se cambia por 2 over 1.5 con probabilidad de al menos la raíz del umbral (≈0.81 para 0.65), para conservar la probabilidad del ticket.'] : []),
+        ? [`Respaldo over 1.5: si faltan over 2.5 en un ticket, cada uno se cambia por 2 over 1.5 con probabilidad de al menos la raíz del umbral (≈${Math.sqrt(floor).toFixed(2)} para ${floor}), para conservar la probabilidad del ticket.`] : []),
       ...(extra ? [`${DREAMER.name}: ${[['OVER_2_5', '2.5'], ['OVER_1_5', '1.5']].map(([m, l]) => [extra.selections.filter(x => x.market === m).length, l])
         .filter(([c]) => c).map(([c, l]) => `${c} over ${l}`).join(' + ')}, probabilidad conjunta estimada ${Math.round(extra.probability * 100)}%. Alto riesgo.`] : [])
     ]
@@ -212,4 +215,42 @@ export function ticketStatus(results, legs = 4) {
   if (results.every(r => r === 'won')) return 'won';
   if (results.includes('review')) return 'review';
   return 'pending';
+}
+
+// Tickets que siguen en juego: pendientes (o en revisión) cuyo último partido no
+// pasó hace más de `staleMs` (4 días: las ligas CSV se liquidan con retraso). Un
+// ticket atorado (partido suspendido) deja de bloquear la tanda nueva.
+export function activeTickets(batch, now = Date.now(), staleMs = 4 * 86_400_000) {
+  return (batch?.tickets ?? []).filter(t => ['pending', 'review'].includes(t.status)
+    && Math.max(...t.selections.map(x => Date.parse(x.match.kickoff))) > now - staleMs);
+}
+
+const ticketName = t => t.kind === 'dreamer' ? t.name ?? 'La soñadora' : `ticket ${t.number}`;
+const joinList = items => items.length < 2 ? items.join('') : `${items.slice(0, -1).join(', ')} y ${items.at(-1)}`;
+
+// Aviso diario (23:45) con el estado de la tanda en juego.
+export function statusNotice(batch, now = Date.now()) {
+  const active = activeTickets(batch, now), won = batch.tickets.filter(t => t.status === 'won');
+  const lost = batch.tickets.filter(t => t.status === 'lost').length;
+  const names = joinList(active.map(ticketName));
+  const title = active.length === batch.tickets.length ? 'Todos tus tickets siguen activos ✅' : `${active.length} de ${batch.tickets.length} tickets siguen activos`;
+  const body = [
+    active.length === 1 ? `Sigue activo: ${names}.` : `Siguen activos: ${names}.`,
+    active.length === batch.tickets.length ? 'No se ha perdido ningún partido.' : '',
+    won.length ? `Ganado${won.length > 1 ? 's' : ''}: ${joinList(won.map(ticketName))}.` : '',
+    lost ? `Perdido${lost > 1 ? 's' : ''}: ${lost}.` : ''
+  ].filter(Boolean).join(' ');
+  return { title: title.charAt(0).toUpperCase() + title.slice(1), body };
+}
+
+// Aviso de tanda nueva (cuando la anterior ya no tiene tickets en juego).
+export function newBatchNotice(batch, previous = null, timeZone = 'America/Mazatlan') {
+  const count = batch.tickets.length;
+  const won = previous?.tickets.filter(t => t.status === 'won').length ?? 0;
+  const before = previous ? (won ? `Tu tanda anterior terminó con ${won} ticket${won > 1 ? 's' : ''} ganado${won > 1 ? 's' : ''}. ` : 'Tus tickets anteriores ya se resolvieron. ') : '';
+  if (!count) return { title: 'Sin tickets nuevos por ahora', body: `${before}No hubo partidos con la probabilidad suficiente; mañana se vuelve a intentar.` };
+  const days = batch.tickets.flatMap(t => t.selections.map(x => dayKey(Date.parse(x.match.kickoff), timeZone))).sort();
+  const dm = d => `${d.slice(8)}/${d.slice(5, 7)}`;
+  const span = days.length ? (days[0] === days.at(-1) ? ` Partidos del ${dm(days[0])}.` : ` Partidos del ${dm(days[0])} al ${dm(days.at(-1))}.`) : '';
+  return { title: 'Tus nuevos tickets ya están listos 🎟️', body: `${before}${count} ticket${count > 1 ? 's' : ''} nuevo${count > 1 ? 's' : ''}.${span}` };
 }

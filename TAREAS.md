@@ -11,6 +11,7 @@ Estados: ⏳ pendiente · 🔧 en proceso · ✅ hecho · ⏸️ en espera.
 | 5 | Re-validar las 9 ligas CSV sin usar con el criterio nuevo (0.62 / respaldo 0.79) | ✅ hecho y subido | 24 438 partidos descargados una vez. Over 2.5: ninguna pasa (todas <62%) → bloqueadas también por API-Football (antes entraban sin validar). Over 1.5: 2. Bundesliga pasa (80.3%) → respaldo por CSV, sin cuota; Austria (80.1%) → respaldo por API-Football. Las otras 7 ya no gastan consultas en discover. 80/80. |
 | 6 | Football Charts como fuente (98 ligas, 200 consultas/día gratis, uso personal con atribución) | ✅ en producción · ⏳ primera carga hoy 20:08 | 22 ligas validadas (15 en over 2.5, 19 en over 1.5). Clave en Vercel, migraciones 013/014 aplicadas, código subido. El primer intento falló por partidos repetidos (29 de 9277) y gastó la cuota del día; corregido (sin repetidos, freno a 5 consultas, no sigue sin catálogo). La cuota vuelve a las 17:00 y el cron de las 20:08 hace la primera carga. 87/87. |
 | 7 | Resultados internacionales (CC0) para validar partidos de selecciones | ⏳ pendiente | Para fechas FIFA como esta semana. |
+| 8 | Tickets de hasta 7 días (umbral 0.67), aviso diario 23:45 y tickets nuevos al resolverse todos; arreglar aviso de ticket ganado | 🔧 código listo · ⏳ despliegue | Causa del aviso: ningún teléfono registrado (`devices` vacía). La app ahora activa los avisos sola. Falta: migración 016, push, APK v6. Backend 95/95, app 19/19. |
 | 4 | Plan de pago de API-Football | ⏸️ en espera | Solo si 1-3 no alcanzan. Revisar precio antes. |
 
 ## Bitácora
@@ -24,3 +25,4 @@ Estados: ⏳ pendiente · 🔧 en proceso · ✅ hecho · ⏸️ en espera.
 - 2026-11-16: tarea 6: clave de Football Charts recibida (200/día confirmada). Descargadas 2 temporadas de 58 ligas (116 consultas) y medidas: pasan 22. Conectándola a producción.
 - 2026-11-16: tarea 6 programada y probada. El sistema pidió permiso para agregar la clave a Vercel; en espera de la confirmación del usuario.
 - 2026-11-16: Football Charts en producción. Error inicial (HTTP 500 por ids repetidos) agotó la cuota del día; corregido. Revisar mañana que `fc_sync` tenga las 22 ligas.
+- 2026-11-20: tarea 8 (tandas de varios días y avisos diarios), código y pruebas listos.

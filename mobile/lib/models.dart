@@ -5,6 +5,13 @@ class Batch {
   Batch(this.data);
   String get id => data['id'] as String;
   String get day => data['day'] as String;
+  // Último día que abarca la tanda (tandas de varios días); antiguas: null.
+  String? get until => data['until'] as String?;
+  String get dayLabel {
+    String dm(String d) => '${d.substring(8, 10)}/${d.substring(5, 7)}';
+    final end = until;
+    return end == null || end == day ? dm(day) : 'Del ${dm(day)} al ${dm(end)}';
+  }
   bool get isDemo => data['mode'] == 'demo';
   String get source => data['source'] as String;
   int get missing => data['missingMatches'] as int;
