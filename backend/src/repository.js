@@ -204,6 +204,45 @@ export class SupabaseRepository {
     await this.request('fc_sync?on_conflict=league', { method: 'POST', body: leagues.map(league => ({ league, synced_at: now })),
       headers: { Prefer: 'resolution=merge-duplicates,return=minimal' } });
   }
+  // Bzzoiro Sports Data: partidos de todas sus competiciones (job bsd).
+  async storeBsdMatches(matches, before) {
+    const unique = new Map(matches.map(m => [m.id, m]));
+    const rows = [...unique.values()].map(m => ({
+      id: m.id, league: m.league.id, league_name: m.league.name, cup: Boolean(m.cup), kickoff: m.kickoff,
+      home_id: m.home.id, home_name: m.home.name ?? '', away_id: m.away.id, away_name: m.away.name ?? '',
+      status: m.status, home_goals: m.homeGoals, away_goals: m.awayGoals, synced_at: new Date().toISOString()
+    }));
+    const upsert = { Prefer: 'resolution=merge-duplicates,return=minimal' };
+    for (let i = 0; i < rows.length; i += 500) {
+      await this.request('bsd_matches?on_conflict=id', { method: 'POST', body: rows.slice(i, i + 500), headers: upsert });
+    }
+    if (before) await this.request(`bsd_matches?kickoff=lt.${encodeURIComponent(new Date(before).toISOString())}`, { method: 'DELETE' });
+  }
+  #bsdRow(r) {
+    return { id: r.id, league: { id: r.league, name: r.league_name }, cup: r.cup, kickoff: new Date(r.kickoff).toISOString(),
+      status: r.status, home: { id: r.home_id, name: r.home_name }, away: { id: r.away_id, name: r.away_name },
+      homeGoals: r.home_goals, awayGoals: r.away_goals };
+  }
+  // Partidos desde `since`: de las ligas dadas o, con `teams`, de esos equipos (sin copas).
+  async bsdMatches(since, { leagues, teams } = {}) {
+    if ((leagues && !leagues.length) || (teams && !teams.length)) return [];
+    const list = xs => xs.map(x => encodeURIComponent(x)).join(',');
+    const out = [], filter = `kickoff=gte.${encodeURIComponent(new Date(since).toISOString())}` +
+      (leagues ? `&league=in.(${list(leagues)})` : '') +
+      (teams ? `&cup=eq.false&or=(home_id.in.(${list(teams)}),away_id.in.(${list(teams)}))` : '');
+    for (let offset = 0; offset < 100_000; offset += 1000) {
+      const rows = await this.request(`bsd_matches?${filter}&select=*&order=id.asc&limit=1000&offset=${offset}`);
+      out.push(...rows.map(r => this.#bsdRow(r)));
+      if (rows.length < 1000) break;
+    }
+    return out;
+  }
+  async bsdResults(ids) {
+    if (!ids.length) return [];
+    const list = ids.map(id => `"${id.replace(/["\\]/g, '')}"`).join(',');
+    const rows = await this.request(`bsd_matches?id=in.(${encodeURIComponent(list)})&status=in.(FINISHED,POSTPONED,CANCELLED,SUSPENDED,UNKNOWN)&select=*`);
+    return rows.map(r => this.#bsdRow(r));
+  }
   // API-Football (plan gratuito): consultas gastadas por día y listas ya bajadas.
   async afUsage(day) {
     const rows = await this.request(`af_usage?day=eq.${day}&select=calls,lists_done`);

@@ -851,3 +851,26 @@ No se dejaron servidores activos ni se desplegó el proyecto.
   Sudamericana 33, Liga MX 19/20, MLS 18; sin Concachampions; historial desde 2022;
   límite 7500/día, 200 por página) y guardada en backend/.env como BSD_TOKEN (no en
   Vercel). Descarga única en backend/data/bsd (ignorado) para backtest de copas.
+- 2026-11-22: backtests con BSD (descarga 2022-07 a 2026-11, 22 MB, scripts en
+  scratchpad bt-bsd-cups.mjs / bt-bsd-leagues.mjs; evaluación desde 2023-07, "prueba" =
+  desde 2025-07; umbral fijo, no ajustado). Copas con liga local de cada equipo: CL o2.5
+  ≥0.67 59.6% (57) y o1.5 ≥0.82 81.1% (206, = base 80.5%); EL o2.5 ≥0.67 65.5% (29,
+  inestable) y o1.5 ≥0.82 86.5% (111; prueba 90.5%/42) → candidata a respaldo o1.5;
+  Conference, Libertadores y Sudamericana no pasan. Ligas (modelo principal; pasa o2.5 =
+  ≥40 sel, ≥67% y prueba ≥62%): China SL 72.0/93, Suiza SL 71.3/87, National League
+  70.7/75, NPL Queensland 70.2/141, MLS 69.8/192, Eredivisie 69.7/145, Premier 69.0/84,
+  Eliteserien 68.4/79, Liga F (fem.) 81.7/60. Pasan o1.5 ≥0.82 (≥82%): además Portugal,
+  Turquía 1. Lig, Allsvenskan, Liga MX, Bundesliga, Dinamarca, Championship, Grecia,
+  Eslovaquia, Arabia, Polonia, Bélgica. Sin selecciones: Argentina, Chequia, A-League,
+  Colombia, etc. Conclusión: BSD puede reemplazar a API-Football; falta integrarla.
+  Soporte de API-Football confirmó: suspensión por IP compartida de Vercel; soluciones:
+  IP de salida dedicada o plan de pago.
+- 2026-11-22: BSD integrada (con aprobación del usuario; incluye Liga F y NPL Queensland,
+  desactivables con BSD_COMPETITIONS). src/bsd.js, migración 018 (bsd_matches + cron
+  momios-bsd '12 * * * *') aplicada, carga inicial `npm run import:bsd` = 32 908 partidos
+  (BSD trae marcador -1 en la final de la Copa África 2025 → normalizeBsd lo deja UNKNOWN),
+  BSD_TOKEN en Vercel Production (sensible). generate: ligas BSD_VALIDATION (o2.5: China,
+  Suiza, National League, NPL Queensland, MLS, Eliteserien, Liga F; solo o1.5: Liga MX,
+  Grecia, Bélgica, Polonia, Arabia, Europa League con crossPredict). Quitadas de CSV:
+  CHN, SWZ, USA, NOR, MEX, G1, B1, POL; de Football Charts: national, saudi1. settle lee
+  bsd_matches. 105/105.

@@ -8,6 +8,7 @@ import { CSV_LEAGUES, defaultCsvLeagues } from './csvleagues.js';
 import { MARKETS } from './tickets.js';
 import { OLDB_LEAGUES, defaultOldbLeagues } from './openliga.js';
 import { FC_LEAGUES, FC_BASE } from './footballcharts.js';
+import { BSD_LEAGUES, BSD_BASE, BSD_REPLACES } from './bsd.js';
 import { EVIDENCE } from './model.js';
 
 export function configuredApp(env = process.env) {
@@ -35,12 +36,19 @@ export function configuredApp(env = process.env) {
   // Días que abarca una tanda (1 = solo el día de la tanda; 7 = una semana).
   const days = Number(env.TICKET_DAYS ?? 7);
   if (!Number.isInteger(days) || days < 1 || days > 7) throw new Error('TICKET_DAYS debe estar entre 1 y 7');
+  // Bzzoiro Sports Data (BSD_TOKEN): BSD_COMPETITIONS cambia las ligas ("none" desactiva;
+  // ids como "18,52" o "bsd-18"). Las ligas que toma se quitan de CSV y Football Charts.
+  const bsdLeagues = !env.BSD_TOKEN?.trim() || env.BSD_COMPETITIONS?.trim() === 'none' ? []
+    : env.BSD_COMPETITIONS ? env.BSD_COMPETITIONS.split(',').map(x => x.trim()).filter(Boolean).map(x => x.startsWith('bsd-') ? x : `bsd-${x}`)
+      : Object.keys(BSD_LEAGUES);
+  if (bsdLeagues.some(l => !BSD_LEAGUES[l])) throw new Error('BSD_COMPETITIONS contiene una liga no compatible');
+  const takenByBsd = (map, code) => bsdLeagues.includes(map[code]);
   // Ligas de football-data.co.uk (CSV): "none" las desactiva.
   // En over 2.5 también se cargan las ligas validadas solo en over 1.5, pero únicamente
   // como respaldo over 1.5 (`backupOnly`): nunca entran como over 2.5.
   const withBackup = (defaults, market) => market === 'OVER_2_5' ? [...new Set([...defaults('OVER_2_5'), ...defaults('OVER_1_5')])] : defaults(market);
   const backupOf = defaults => market === 'OVER_2_5' ? defaults('OVER_1_5').filter(c => !defaults('OVER_2_5').includes(c)) : [];
-  const csvLeagues = env.CSV_COMPETITIONS === undefined ? withBackup(defaultCsvLeagues, market)
+  const csvLeagues = env.CSV_COMPETITIONS === undefined ? withBackup(defaultCsvLeagues, market).filter(c => !takenByBsd(BSD_REPLACES.csv, c))
     : env.CSV_COMPETITIONS.trim() === 'none' ? [] : [...new Set(env.CSV_COMPETITIONS.split(',').map(x => x.trim()).filter(Boolean))];
   if (csvLeagues.some(code => !CSV_LEAGUES[code])) throw new Error('CSV_COMPETITIONS contiene una liga no compatible');
   // OpenLigaDB (3. Liga): "none" la desactiva.
@@ -52,7 +60,8 @@ export function configuredApp(env = process.env) {
   // Football Charts (clave gratis, uso personal con atribución): FC_COMPETITIONS cambia las
   // ligas ("none" desactiva). Ritmo: ≤55 consultas/min (su límite es 60).
   const fcLeagues = !env.FOOTBALL_CHARTS_KEY?.trim() || env.FC_COMPETITIONS?.trim() === 'none' ? []
-    : env.FC_COMPETITIONS ? env.FC_COMPETITIONS.split(',').map(x => x.trim()).filter(Boolean) : Object.keys(FC_LEAGUES);
+    : env.FC_COMPETITIONS ? env.FC_COMPETITIONS.split(',').map(x => x.trim()).filter(Boolean)
+      : Object.keys(FC_LEAGUES).filter(l => !takenByBsd(BSD_REPLACES.fc, l));
   if (fcLeagues.some(l => !FC_LEAGUES[l])) throw new Error('FC_COMPETITIONS contiene una liga no compatible');
   let fcLast = 0, fcRemaining = Infinity;
   const fc = fcLeagues.length ? { key: env.FOOTBALL_CHARTS_KEY.trim(), leagues: fcLeagues, perRun: 10, get: async path => {
@@ -67,6 +76,16 @@ export function configuredApp(env = process.env) {
     if (!response.ok) throw new Error(`Football Charts: HTTP ${response.status}`);
     return response.json();
   } } : null;
+  let bsdLast = 0;
+  const bsd = bsdLeagues.length ? { leagues: bsdLeagues, get: async path => {
+    // En serie y con pausa de 300 ms (límite 7500/día, sin límite por minuto publicado).
+    const wait = bsdLast + 300 - Date.now();
+    if (wait > 0) await new Promise(resolve => setTimeout(resolve, wait));
+    bsdLast = Date.now();
+    const response = await fetch(`${BSD_BASE}${path}`, { headers: { Authorization: `Token ${env.BSD_TOKEN.trim()}` }, signal: AbortSignal.timeout(20_000) });
+    if (!response.ok) throw new Error(`BSD: HTTP ${response.status}`);
+    return response.json();
+  } } : null;
   // Un proveedor por instancia de la API, creado solo cuando un job lo necesita.
   // Auth, historial y lectura de tickets funcionan sin token de fútbol.
   let football;
@@ -77,7 +96,7 @@ export function configuredApp(env = process.env) {
     return football ??= new FootballData({ token: env.FOOTBALL_DATA_TOKEN.trim(), competitions: env.FOOTBALL_COMPETITIONS,
       fetcher: async (url, options) => Response.json(await footballHttp.get('football-data', url, options.headers)) });
   };
-  return createApp({ ...common, csvLeagues, openLiga, market, legs, minProbability, ticketThresholds, backupOnly, fc,
+  return createApp({ ...common, csvLeagues, openLiga, market, legs, minProbability, ticketThresholds, backupOnly, fc, bsd,
     maxTickets: ticketThresholds?.length ?? maxTickets,
     // Ticket "La soñadora" (8 over 2.5): TICKET_DREAMER=false lo apaga.
     dreamer: env.TICKET_DREAMER?.trim() !== 'false',

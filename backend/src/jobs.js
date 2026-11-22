@@ -4,6 +4,7 @@ import { lambdaFromOver15, featuresFromHistory } from './apifootball.js';
 import { syncCsv, CSV_LEAGUES, CSV_VALIDATION } from './csvleagues.js';
 import { oldbSnapshot, oldbResults, OLDB_LEAGUES, OLDB_VALIDATION, OLDB_ATTRIBUTION } from './openliga.js';
 import { syncFc, fcBlocked, FC_ATTRIBUTION } from './footballcharts.js';
+import { bsdEvents, bsdBlocked, BSD_CROSS, BSD_ATTRIBUTION } from './bsd.js';
 
 const DAY = 86_400_000;
 // Ligas de año natural (Brasileirão): la temporada AAAA se juega de abril a diciembre.
@@ -16,7 +17,7 @@ export function previousSeason(now = Date.now(), league = '') {
   return (d.getUTCMonth() >= 6 ? year : year - 1) - 1;
 }
 
-export async function runJob(kind, { repo, provider, push, timeZone, minProbability, csvLeagues, csvSync, market, legs, maxTickets, evidence, openLiga, dreamer, sameDay, days = sameDay ? 1 : null, ticketThresholds, backupOnly = [], fc = null, afEnabled, now = Date.now() }) {
+export async function runJob(kind, { repo, provider, push, timeZone, minProbability, csvLeagues, csvSync, market, legs, maxTickets, evidence, openLiga, dreamer, sameDay, days = sameDay ? 1 : null, ticketThresholds, backupOnly = [], fc = null, bsd = null, afEnabled, now = Date.now() }) {
   const owner = await repo.acquireLock();
   if (!owner) return { skipped: true, reason: 'Hay otra tarea ejecutándose o se está respetando el límite del proveedor' };
   const deadline = Date.now() + 45_000;
@@ -110,8 +111,36 @@ export async function runJob(kind, { repo, provider, push, timeZone, minProbabil
           if (upcoming.length) snapshot.warnings = [...(snapshot.warnings ?? []), FC_ATTRIBUTION];
         }
       }
+      // BSD: lo guardado por el job bsd (sin consultas aquí). Modelo principal con su
+      // historial; la Europa League, con la liga local de cada equipo (crossPredict).
+      let bsdBackup = [], bsdBlocked15 = [];
+      if (bsd?.leagues?.length) {
+        const since = now - 400 * DAY;
+        const rows = await Promise.resolve().then(() => repo.bsdMatches(since, { leagues: bsd.leagues })).catch(() => null);
+        if (!rows) snapshot.warnings = [...(snapshot.warnings ?? []), 'Bzzoiro Sports Data no disponible en esta tanda.'];
+        else {
+          const cross = new Set(bsd.leagues.filter(l => BSD_CROSS.has(l)));
+          const upcoming = rows.filter(m => m.status === 'TIMED' && Date.parse(m.kickoff) > now);
+          // Historial de las ligas locales de los equipos de copa (dos consultas pequeñas).
+          let local = [];
+          const teams = [...new Set(upcoming.filter(m => cross.has(m.league.id)).flatMap(m => [m.home.id, m.away.id]))];
+          if (teams.length) {
+            const own = await Promise.resolve().then(() => repo.bsdMatches(since, { teams })).catch(() => []);
+            const leagues = [...new Set(own.map(m => m.league.id))].filter(l => !bsd.leagues.includes(l));
+            local = await Promise.resolve().then(() => repo.bsdMatches(since, { leagues })).catch(() => []);
+          }
+          // Sin hora real de publicación: el resultado se da por conocido 3 h después del inicio.
+          snapshot.history.push(...[...rows, ...local].filter(m => m.status === 'FINISHED')
+            .map(m => ({ ...m, availableAt: new Date(Date.parse(m.kickoff) + 3 * 3_600_000).toISOString() }))
+            .filter(m => Date.parse(m.availableAt) <= now));
+          snapshot.fixtures = [...snapshot.fixtures, ...upcoming.map(m => cross.has(m.league.id) ? { ...m, crossLeague: true } : m)];
+          bsdBackup = bsdBlocked('OVER_2_5', bsd.leagues);
+          bsdBlocked15 = bsdBlocked('OVER_1_5', bsd.leagues);
+          if (upcoming.length) snapshot.warnings = [...(snapshot.warnings ?? []), BSD_ATTRIBUTION];
+        }
+      }
       const batch = generateBatch(snapshot, { now, timeZone, minProbability, excludedIds, market, legs, maxTickets, evidence, dreamer, day, days,
-        ticketThresholds, backupOnly: [...backupOnly, ...fcBackup], blocked15: fcBlocked15 });
+        ticketThresholds, backupOnly: [...backupOnly, ...fcBackup, ...bsdBackup], blocked15: [...fcBlocked15, ...bsdBlocked15] });
       let publishedId;
       try { publishedId = await repo.publish(batch); }
       catch (error) {
@@ -150,6 +179,12 @@ export async function runJob(kind, { repo, provider, push, timeZone, minProbabil
       for (let i = 0; i < fcIds.length; i += 50) {
         const matches = await Promise.resolve().then(() => repo.fcResults(fcIds.slice(i, i + 50))).catch(() => []);
         results.push(...matches.map(m => ({ ...resultOf(m, marketOf.get(m.matchId)), matchId: m.matchId })));
+      }
+      // BSD: resultado guardado por el job bsd (cada hora).
+      const bsdIds = all.filter(id => id.startsWith('bsd-'));
+      for (let i = 0; i < bsdIds.length; i += 100) {
+        const matches = await Promise.resolve().then(() => repo.bsdResults(bsdIds.slice(i, i + 100))).catch(() => []);
+        results.push(...matches.map(m => ({ matchId: m.id, ...resultOf(m, marketOf.get(m.id)) })));
       }
       // Ligas CSV: el resultado ya está en la base (job csv); sin consultas externas.
       for (let i = 0; i < csvIds.length; i += 100) {
@@ -212,6 +247,15 @@ export async function runJob(kind, { repo, provider, push, timeZone, minProbabil
       await repo.markFcSync(done);
       return { synced: done, failed, results: results.length, fixtures: fixtures.length,
         remaining: fc.leagues.filter(l => !done.includes(l) && !(times.get(l) > now - 10 * 3_600_000)).length };
+    }
+    if (kind === 'bsd') {
+      // Ventana corta (resultados de 3 días atrás y próximos 8): ~6-10 consultas de 7500/día.
+      if (!bsd?.get) return { skipped: true, reason: 'Falta BSD_TOKEN' };
+      const utc = t => new Date(t).toISOString().slice(0, 10);
+      const matches = await bsdEvents(utc(now - 3 * DAY), utc(now + 8 * DAY), { get: bsd.get });
+      await repo.storeBsdMatches(matches, now - 400 * DAY);
+      return { stored: matches.length, finished: matches.filter(m => m.status === 'FINISHED').length,
+        upcoming: matches.filter(m => m.status === 'TIMED').length };
     }
     if (kind === 'notify') return deliverNotifications(repo, push, deadline);
     throw new Error('Tarea desconocida');

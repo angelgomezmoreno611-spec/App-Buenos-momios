@@ -137,7 +137,14 @@ envía a todos los teléfonos el estado ("Siguen activos: ticket 1 y 3…", clav
   (`featuresFromHistory`) y respeta `FC_VALIDATION` por mercado; settle lee la tabla
   (por id o por equipos ±1 día). Sus ligas cuentan como cubiertas para API-Football
   (sin duplicados). IDs `fc-`. `FC_COMPETITIONS` (`none` desactiva).
-- Copas europeas: **no** entran. Champions (football-data, gratis) probada el 2026-11-21
+- `src/bsd.js`: Bzzoiro Sports Data (gratis permanente, 7500/día, `BSD_TOKEN`). Job `bsd`
+  cada hora (:12, migración 018) guarda una ventana de 3 días atrás a 8 adelante de TODAS
+  sus competiciones en `bsd_matches` (400 días; carga inicial `npm run import:bsd`).
+  Ligas activas = `BSD_VALIDATION` (backtest 2026-11-22; `BSD_COMPETITIONS`, `none`
+  desactiva); las que toma se quitan de CSV/Football Charts (`BSD_REPLACES`). La Europa
+  League (solo respaldo over 1.5) se calcula con la liga local de cada equipo
+  (`crossPredict` en `model.js`, `crossLeague` en el partido). IDs `bsd-`.
+- Copas europeas: salvo la Europa League como respaldo over 1.5, **no** entran. Champions (football-data, gratis) probada el 2026-11-21
   con la liga local de cada equipo: ≥0.67 acertó 58.8% (34 sel.) frente a 61% base, sin
   capacidad de distinguir; Europa y Conference League no están en el plan gratuito.
 - `src/football/`: módulo independiente de información de partidos con ocho

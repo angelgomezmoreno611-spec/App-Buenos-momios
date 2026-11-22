@@ -1,11 +1,13 @@
 import { randomUUID } from 'node:crypto';
-import { predict, MODEL_VERSION, MODEL_EVIDENCE } from './model.js';
+import { predict, crossPredict, MODEL_VERSION, MODEL_EVIDENCE } from './model.js';
 import { formPredict, FORM_MIN, FORM_EVIDENCE } from './apifootball.js';
 
 // Partidos de API-Football (traen `formFeatures`) usan el modelo de forma reciente
 // y un umbral más exigente; el resto, el modelo principal con historial.
 const isForm = f => 'formFeatures' in f;
-const predictFixture = (f, history, opts) => isForm(f) ? formPredict(f, f.formFeatures, { ...opts, leagueGoals: f.formLeagueGoals }) : predict(f, history, opts);
+// Copas marcadas con `crossLeague` (Europa League de BSD): liga local de cada equipo.
+const predictFixture = (f, history, opts) => isForm(f) ? formPredict(f, f.formFeatures, { ...opts, leagueGoals: f.formLeagueGoals })
+  : f.crossLeague ? crossPredict(f, history, opts) : predict(f, history, opts);
 const minFor = (f, market, base) => isForm(f) ? Math.max(base, FORM_MIN[market]) : base;
 
 export function dayKey(now = Date.now(), timeZone = 'America/Mazatlan') {
@@ -56,7 +58,7 @@ export function dreamerTicket(fixtures, history, { now, usedIds, number, alt15 =
     .filter(x => x.prediction.eligible && x.prediction.probability >= min) // su propio mínimo, sin FORM_MIN
     .sort((a, b) => b.prediction.probability - a.prediction.probability || a.match.id.localeCompare(b.match.id))
     .slice(0, picks);
-  const selections = ranked.map(({ match: { formFeatures, formLeagueGoals, analyzed, ...match }, prediction }) =>
+  const selections = ranked.map(({ match: { formFeatures, formLeagueGoals, analyzed, crossLeague, cup, ...match }, prediction }) =>
     ({ match, prediction, market, result: 'pending', score: null }));
   const missing = picks - ranked.length;
   if (missing > 0) {
@@ -105,7 +107,7 @@ export function generateBatch(snapshot, { now = Date.now(), timeZone, minProbabi
     if (ticketThresholds && market === 'OVER_2_5' && !MARKET_BLOCKED.OVER_1_5.includes(f.league.id) && !blocked15.includes(f.league.id)) {
       const p15 = predictFixture(f, snapshot.history, { asOf: now, line: MARKETS.OVER_1_5.line });
       if (p15.eligible) {
-        const { formFeatures, formLeagueGoals, analyzed, ...match } = f;
+        const { formFeatures, formLeagueGoals, analyzed, crossLeague, cup, ...match } = f;
         alt15.push({ match, prediction: p15, market: 'OVER_1_5', result: 'pending', score: null, form: isForm(f) });
       }
     }
@@ -118,7 +120,7 @@ export function generateBatch(snapshot, { now = Date.now(), timeZone, minProbabi
       rejections.push({ matchId: f.id, reason: prediction.reason ?? 'Probabilidad inferior al umbral' });
       continue;
     }
-    const { formFeatures, formLeagueGoals, analyzed, ...match } = f; // no se publican datos internos
+    const { formFeatures, formLeagueGoals, analyzed, crossLeague, cup, ...match } = f; // no se publican datos internos
     candidates.push({ match, prediction, market, result: 'pending', score: null });
   }
   candidates.sort((a, b) => b.prediction.probability - a.prediction.probability || a.match.id.localeCompare(b.match.id));

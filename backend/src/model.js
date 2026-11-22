@@ -113,3 +113,27 @@ export function predict(fixture, history, { asOf = Date.now(), params = DEFAULT_
     ]
   };
 }
+
+// Copas (Europa League): cada equipo juega muy pocos partidos por condición en la
+// copa, así que se usa su liga local: la que más partidos suyos tiene en los 400 días
+// previos (sin contar copas). Las filas de esas ligas se reetiquetan con la
+// competición del partido y se usa el mismo modelo (backtest con BSD, 2026-11-22).
+export function domesticLeagueOf(team, rows, asOf) {
+  const count = new Map();
+  for (const r of rows) {
+    const t = Date.parse(r.kickoff);
+    if (r.cup || t >= asOf || t < asOf - 400 * DAY || (r.home.id !== team && r.away.id !== team)) continue;
+    count.set(r.league.id, (count.get(r.league.id) ?? 0) + 1);
+  }
+  return [...count].sort((a, b) => b[1] - a[1] || String(a[0]).localeCompare(String(b[0])))[0]?.[0] ?? null;
+}
+export function crossPredict(fixture, history, options = {}) {
+  const asOf = options.asOf ?? Date.now();
+  const homeLeague = domesticLeagueOf(fixture.home?.id, history, asOf), awayLeague = domesticLeagueOf(fixture.away?.id, history, asOf);
+  if (!homeLeague || !awayLeague) return { eligible: false, matchId: fixture.id, reason: 'Equipo sin liga local con historial' };
+  const leagues = new Set([homeLeague, awayLeague]);
+  const rows = history.filter(r => !r.cup && leagues.has(r.league.id)).map(r => ({ ...r, league: fixture.league }));
+  const prediction = predict(fixture, rows, options);
+  return prediction.eligible ? { ...prediction, domesticLeagues: [...leagues],
+    reasons: [...prediction.reasons, 'Copa: calculado con la liga local de cada equipo.'] } : prediction;
+}

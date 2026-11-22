@@ -145,6 +145,20 @@ test('migración conserva las tandas y fechas del historial anterior', async () 
     assert.equal((await legacy.query('select count(*)::int n from public.devices')).rows[0].n, 1);
   } finally { await legacy.close(); }
 });
+test('bsd_matches (018): ids con namespace, marcador en terminados y solo service_role', async () => {
+  const cols = 'id, league, league_name, cup, kickoff, home_id, home_name, away_id, away_name, status, home_goals, away_goals';
+  await db.exec(`set role service_role;
+    insert into public.bsd_matches(${cols}) values ('bsd-1', 'bsd-8', 'Europa League', true, now(), 'bsd-4', 'A', 'bsd-11', 'B', 'TIMED', null, null),
+      ('bsd-2', 'bsd-18', 'MLS', false, now(), 'bsd-1', 'A', 'bsd-5', 'B', 'FINISHED', 3, 1);
+    reset role;`);
+  await assert.rejects(db.exec(`insert into public.bsd_matches(${cols}) values ('bsd-3', 'bsd-18', 'MLS', false, now(), 'a', 'A', 'b', 'B', 'FINISHED', null, null)`), /check/);
+  await assert.rejects(db.exec(`insert into public.bsd_matches(${cols}) values ('fd-3', 'bsd-18', 'MLS', false, now(), 'a', 'A', 'b', 'B', 'TIMED', null, null)`), /check/);
+  await assert.rejects(db.exec(`insert into public.bsd_matches(${cols}) values ('bsd-4', 'bsd-18', 'MLS', false, now(), 'a', 'A', 'b', 'B', 'LIVE', null, null)`), /check/);
+  await assert.rejects(db.exec('set role authenticated; select * from public.bsd_matches;'), /permission denied/);
+  await db.exec('reset role;');
+  assert.equal((await db.query('select count(*)::int n from public.bsd_matches')).rows[0].n, 2);
+});
+
 test('csv_matches exige marcador en partidos terminados y solo admite service_role', async () => {
   await db.exec(`set role service_role;
     insert into public.csv_sync_runs default values;

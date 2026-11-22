@@ -25,7 +25,7 @@ async function readJson(req) {
   catch { throw Object.assign(new Error('JSON inválido'), { status: 400 }); }
 }
 
-export function createApp({ mode = 'live', repo, provider, push, cronSecret, timeZone = 'America/Mazatlan', minProbability = 0.65, allowedOrigin, footballService, csvLeagues = [], market = 'OVER_2_5', legs = 3, maxTickets = 4, evidence = null, openLiga = null, dreamer = false, sameDay = false, days = sameDay ? 1 : null, ticketThresholds = null, backupOnly = [], fc = null, apiFootball = null }) {
+export function createApp({ mode = 'live', repo, provider, push, cronSecret, timeZone = 'America/Mazatlan', minProbability = 0.65, allowedOrigin, footballService, csvLeagues = [], market = 'OVER_2_5', legs = 3, maxTickets = 4, evidence = null, openLiga = null, dreamer = false, sameDay = false, days = sameDay ? 1 : null, ticketThresholds = null, backupOnly = [], fc = null, bsd = null, apiFootball = null }) {
   if (!['live', 'demo'].includes(mode)) throw new Error('DATA_MODE debe ser live o demo');
   let demo;
   const send = (res, status, value) => { res.statusCode = status; res.end(JSON.stringify(value)); };
@@ -45,11 +45,11 @@ export function createApp({ mode = 'live', repo, provider, push, cronSecret, tim
         if (!['GET', 'POST'].includes(req.method)) return send(res, 405, { error: 'Método no permitido' });
         if (!secretEquals(req.headers.authorization, cronSecret ? `Bearer ${cronSecret}` : '')) return send(res, 401, { error: 'No autorizado' });
         const kind = path.split('/').at(-1);
-        if (!['generate', 'settle', 'notify', 'history', 'csv', 'discover', 'fc'].includes(kind)) return send(res, 404, { error: 'Tarea desconocida' });
+        if (!['generate', 'settle', 'notify', 'history', 'csv', 'discover', 'fc', 'bsd'].includes(kind)) return send(res, 404, { error: 'Tarea desconocida' });
         if (mode === 'demo') return send(res, 409, { error: 'Las tareas reales están desactivadas en demo' });
         // discover usa otra fuente y otras tablas: no toma el lock compartido.
         if (kind === 'discover') return send(res, 200, await runDiscover({ repo, key: apiFootball?.key, fetcher: apiFootball?.fetcher, timeZone }));
-        return send(res, 200, await runJob(kind, { repo, provider, push, timeZone, minProbability, csvLeagues, market, legs, maxTickets, evidence, openLiga, dreamer, days, ticketThresholds, backupOnly, fc, afEnabled: Boolean(apiFootball?.key) }));
+        return send(res, 200, await runJob(kind, { repo, provider, push, timeZone, minProbability, csvLeagues, market, legs, maxTickets, evidence, openLiga, dreamer, days, ticketThresholds, backupOnly, fc, bsd, afEnabled: Boolean(apiFootball?.key) }));
       }
       const footballRoute = ['/api/football/sources', '/api/football/matches', '/api/football/match'].includes(path);
       if (!footballRoute && !['/api/tickets', '/api/history', '/api/subscriptions', '/api/devices'].includes(path)) return send(res, 404, { error: 'Ruta no encontrada' });
