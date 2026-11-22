@@ -40,7 +40,7 @@ test('PostgreSQL publica 3x3 + La soñadora atómicamente y no reutiliza partido
   assert.deepEqual(batch.tickets.map(t => t.kind ?? 'regular'), ['regular', 'regular', 'regular', 'dreamer']);
   const result = await publish(batch);
   assert.equal(result.rows[0].id, batch.id);
-  assert.equal((await db.query('select count(*)::int n from public.selections')).rows[0].n, 15);
+  assert.equal((await db.query('select count(*)::int n from public.selections')).rows[0].n, batch.tickets.reduce((n, t) => n + t.selections.length, 0));
   assert.equal((await publish({ ...batch, id: randomUUID() })).rows[0].id, batch.id);
   const tomorrow = structuredClone(batch);
   tomorrow.id = randomUUID(); tomorrow.day = '2099-01-02';
@@ -175,9 +175,9 @@ test('PostgreSQL acepta tickets de 6 partidos over 1.5 y los liquida con su tama
   await db.query('select public.apply_results($1::jsonb)', [JSON.stringify(results)]);
   assert.equal((await db.query('select status from public.tickets where id = $1', [ticket.id])).rows[0].status, 'won');
   const bad = structuredClone(batch); bad.id = randomUUID(); bad.day = '2099-03-02';
-  // Un ticket normal admite de 3 a 6 partidos (respaldo over 1.5); 2 no.
+  // Un ticket normal admite de 3 a 8 partidos (respaldo over 1.5); 2 no.
   bad.tickets = [{ ...bad.tickets[0], id: randomUUID(), selections: bad.tickets[0].selections.slice(0, 2).map(s => ({ ...s, match: { ...s.match, id: `x-${s.match.id}` } })) }];
-  await assert.rejects(publish(bad), /de tres a seis/);
+  await assert.rejects(publish(bad), /de tres a ocho/);
 });
 test('PostgreSQL sigue aceptando el ticket arriesgado de tandas antiguas', async () => {
   const { generateBatch } = await import('../src/tickets.js');
@@ -217,7 +217,7 @@ test('PostgreSQL acepta La soñadora con 6 partidos y rechaza otros tamaños', a
   assert.deepEqual(row, { kind: 'dreamer', legs: 6, ordinal: batch.tickets.length });
   const short = structuredClone(batch); short.id = randomUUID(); short.day = '2099-05-02';
   short.tickets = [{ ...dreamer, id: randomUUID(), selections: dreamer.selections.slice(0, 4).map(s => ({ ...s, match: { ...s.match, id: `${s.match.id}-${randomUUID()}` } })) }];
-  await assert.rejects(publish(short), /de seis a doce partidos/);
+  await assert.rejects(publish(short), /de seis a dieciséis partidos/);
 });
 test('af_matches valida ids y marcador; af_league_rates resume over 1.5 por liga', async () => {
   await db.exec(`insert into public.af_matches(id, league_id, league_name, kickoff, home_id, home_name, away_id, away_name, status, home_goals, away_goals) values

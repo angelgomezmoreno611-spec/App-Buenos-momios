@@ -20,8 +20,8 @@ export function configuredApp(env = process.env) {
   };
   if (mode === 'demo') return createApp(common);
   if (!env.CRON_SECRET || env.CRON_SECRET.length < 32) throw new Error('CRON_SECRET requiere mínimo 32 caracteres');
-  // Mercado, tamaño y número de tickets. Por defecto: 3 tickets over 2.5 de 3 partidos (umbral 0.67).
-  const market = env.TICKET_MARKET?.trim() || 'OVER_2_5', legs = Number(env.TICKET_LEGS ?? 3);
+  // Mercado, tamaño y número de tickets. Por defecto: 3 tickets over 2.5 de 4 partidos (umbral 0.67).
+  const market = env.TICKET_MARKET?.trim() || 'OVER_2_5', legs = Number(env.TICKET_LEGS ?? 4);
   const maxTickets = Number(env.TICKET_COUNT ?? 3);
   if (!MARKETS[market] || ![3, 4, 6].includes(legs)) throw new Error('TICKET_MARKET o TICKET_LEGS inválidos');
   if (!Number.isInteger(maxTickets) || maxTickets < 1 || maxTickets > 4) throw new Error('TICKET_COUNT debe estar entre 1 y 4');
@@ -79,7 +79,7 @@ export function configuredApp(env = process.env) {
   };
   return createApp({ ...common, csvLeagues, openLiga, market, legs, minProbability, ticketThresholds, backupOnly, fc,
     maxTickets: ticketThresholds?.length ?? maxTickets,
-    // Ticket "La soñadora" (6 over 2.5): TICKET_DREAMER=false lo apaga.
+    // Ticket "La soñadora" (8 over 2.5): TICKET_DREAMER=false lo apaga.
     dreamer: env.TICKET_DREAMER?.trim() !== 'false',
     // Partidos de los próximos `days` días (hora local); la tanda sigue hasta resolverse.
     days,

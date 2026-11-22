@@ -4,7 +4,7 @@ Investigación: **6 de noviembre de 2026**. Se implementaron ocho conectores par
 la pestaña **Partidos**. Los planes y la cobertura pueden cambiar; se enlazan las
 fuentes oficiales. Preparar un conector no concede acceso al servicio.
 
-## Comparación de 17 fuentes
+## Comparación de 23 fuentes
 
 | Fuente | Plan gratuito y límites | Estado |
 | --- | --- | --- |
@@ -25,6 +25,12 @@ fuentes oficiales. Preparar un conector no concede acceso al servicio.
 | [OpenFoot](https://openfootapi.com) | 5000 consultas/mes, 120 competiciones (calendario, marcadores, tablas); beta, uso comercial solo en plan Pro | Investigada; sin integrar |
 | [Open-Meteo](https://open-meteo.com/en/pricing) | Clima sin clave para uso no comercial, hasta 10 000 consultas/día y atribución | Investigada; pendiente de coordenadas verificadas de estadios |
 | [TheSports](https://www.thesports.com/pricing) | Prueba de 15 días; no se confirmó plan permanente gratis | Investigada; no activada como fuente gratuita permanente |
+| [Bzzoiro Sports Data (BSD)](https://sports.bzzoiro.com/pricing/) | Gratis permanente ("not a trial"), 7500 consultas/día, sin tarjeta; 60+ competiciones (Europa League, Conference, Libertadores, Liga MX; Concachampions no vista); eventos por rango de fechas y pronósticos; licencia permite backtesting y uso en apps propias, prohíbe revender datos crudos y usar varias cuentas | Investigada 2026-11-22 (páginas del proveedor); falta probar con clave: historial disponible, ids de equipos y marcadores |
+| [Highlightly](https://highlightly.net/football-api/) | Plan Basic $0: 100 consultas/día, 950+ ligas (Europa, Conference, Libertadores, Liga MX) | Investigada 2026-11-22; historial y licencia no indicados |
+| [GOAL API](https://goal-api.com/blog/free-football-api-tiers) | 1000 consultas/día, 1019 ligas, sin tarjeta (según su propio blog) | Investigada 2026-11-22; precios no visibles, copas e historial no confirmados |
+| [SportAPI](https://sportapi.ai/pricing) | 1000/día y 7000/mes por clave (2000/14 000 hasta el 30-11-2026); 117 ligas y copas | Investigada 2026-11-22; historial no indicado |
+| [Big Balls Data](https://bigballsdata.com/football-api) | 1000/día (2000 con GitHub), 100/min; solo temporada actual y un deporte en gratis | Investigada 2026-11-22; sin historial para validar |
+| [ClubElo](http://clubelo.com/API) | Elo de clubes europeos, gratis | Investigada 2026-11-22; no se encontró un endpoint de partidos documentado |
 
 The Odds API corresponde a **the-odds-api.com**, con guiones; hay otros servicios
 con nombres parecidos.

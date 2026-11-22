@@ -41,14 +41,14 @@ export const MARKETS = Object.freeze({ OVER_1_5: { line: 1.5, goals: 2 }, OVER_2
 const AF_BAD_OVER_2_5 = ['af-79', 'af-62', 'af-136', 'af-180', 'af-141', 'af-218', 'af-283', 'af-98', 'af-128'];
 const AF_BAD_OVER_1_5 = ['af-62', 'af-136', 'af-180', 'af-141', 'af-283', 'af-98', 'af-128'];
 export const MARKET_BLOCKED = Object.freeze({ OVER_1_5: ['PD', 'SA', ...AF_BAD_OVER_1_5], OVER_2_5: AF_BAD_OVER_2_5, OVER_3_5: [] });
-// "La soñadora": un ticket largo de 6 over 2.5 con los partidos que no usan los
+// "La soñadora": un ticket largo de 8 over 2.5 con los partidos que no usan los
 // tickets normales. Mínimo 0.60 por selección, también en partidos de
 // API-Football (backtest principal: ≥0.60 acertó 62.8% en 1956 sel.; backtest:form
-// encogido: 60.6% validación / 63.9% prueba). Ticket ≈ 0.6^6 ≈ 5% (1 de cada 21).
-export const DREAMER = Object.freeze({ name: 'La soñadora', market: 'OVER_2_5', picks: 6, min: 0.6 });
+// encogido: 60.6% validación / 63.9% prueba). Ticket ≈ 0.6^8 ≈ 1.7% (1 de cada 60).
+export const DREAMER = Object.freeze({ name: 'La soñadora', market: 'OVER_2_5', picks: 8, min: 0.6 });
 
 // Con `alt15` (respaldo over 1.5), cada over 2.5 que falte se cambia por 2 over 1.5
-// con probabilidad ≥ √min (≈0.78; 0.79 en partidos de forma): de 6 a 12 partidos.
+// con probabilidad ≥ √min (≈0.78; 0.79 en partidos de forma): de 8 a 16 partidos.
 export function dreamerTicket(fixtures, history, { now, usedIds, number, alt15 = null, backupOnly = [] }) {
   const used = new Set(usedIds), { market, picks, min, name } = DREAMER, line = MARKETS[market].line;
   const ranked = fixtures.filter(f => !used.has(f.id) && !MARKET_BLOCKED[market].includes(f.league.id) && !backupOnly.includes(f.league.id))

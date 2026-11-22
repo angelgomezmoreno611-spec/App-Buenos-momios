@@ -813,3 +813,41 @@ No se dejaron servidores activos ni se desplegó el proyecto.
   el 1.º chocó con el lock): tanda 2026-11-21 (96a18f33…), days 7 hasta el 27/11, 3
   tickets 0.67 (prob. 50/46/39%) + La soñadora (6 over 2.5, 12%), aviso "nuevos tickets"
   enviado (sent 1). El generate de las 23:45 ya no crea tanda: debe enviar el estado.
+- 2026-11-21: el usuario pregunta por Champions, Europa y Conference League y pide
+  tickets de 4 partidos y La soñadora de 8.
+  Copas (comprobado): el modelo filtra historial por competición (en copas nadie llega a
+  6 partidos por condición). Backtest de Champions con la liga local de cada equipo
+  (descarga única a backend/data/cl, ignorado: CL 2023-2026 y PL/PD/BL1/SA/FL1/DED/PPL
+  2023-2026; temporadas ≤2022 dan 403 en el plan gratuito; script en scratchpad):
+  289 partidos evaluables de 566 (240 con equipos de ligas no cubiertas). Base over 2.5
+  61.2%; ≥0.60 66.4% (122), ≥0.65 64.7% (51), ≥0.67 58.8% (34); Brier 0.237 = sin
+  capacidad. Over 1.5 ≈81% en todo umbral (= base). Decisión: no incluir copas; se
+  revirtió la función de prueba. Europa League (EL) y Conference (UCL) dan 403 en
+  football-data gratis; API-Football no tiene partidos de ligas 2/3/848 guardados.
+  Tamaños: TICKET_LEGS por defecto 4 (respaldo: hasta 8 partidos), DREAMER.picks 8
+  (hasta 16); migración 017 (legs 3-16, normal 3-8, soñadora 6-16). 96/96. La tanda
+  en juego (3 de 3 + soñadora de 6) no cambia; el tamaño nuevo aplica a la próxima.
+- 2026-11-22 (03:40 UTC): búsqueda de APIs con Europa/Conference/CONCACAF. Comprobado:
+  Football Charts (98 competiciones) no tiene copas; football-data gratis da 403 en EL y
+  UCL. API-Football (3 consultas manuales): "Your account is suspended" en 2 de 3, y en
+  la otra "Free plans do not have access to this season, try from 2022 to 2024".
+  af_matches no se actualiza desde 2026-11-18 04:00 UTC (último synced/analyzed): la
+  fuente API-Football está caída desde entonces aunque af_usage siga contando ~24
+  consultas/día. PENDIENTE (usuario): revisar dashboard.api-football.com.
+  Web: sin API gratis permanente para Conference ni CONCACAF Champions Cup; Sportmonks
+  las cubre con prueba de 14 días; API-Ninjas tiene UCL/UEL gratis no comercial;
+  openfootball/champions-league (Football.TXT, CC0) tiene CL/EL históricos.
+  Sigue pendiente la confirmación del usuario para aplicar 017 y subir 4/8 partidos.
+- 2026-11-22: el usuario pide más APIs gratuitas y la mejor. Investigadas (solo páginas
+  de los proveedores, sin cuentas): Bzzoiro/BSD, Highlightly, GOAL API, SportAPI, Big
+  Balls Data, ClubElo → añadidas a docs/APIS_FUTBOL.md. Recomendada: BSD (gratis
+  permanente, 7500/día, copas europeas y Liga MX, licencia permite backtesting), sin
+  comprobar con clave. La clave nueva de API-Football que pegó el usuario también da
+  "account is suspended" (no se guardó). Causa probable: IP compartida de Vercel
+  (API-Football suspende cuentas gratis por "multicuenta" en la misma IP).
+- 2026-11-22: con confirmación del usuario se aplicó 017 en producción y se suben los
+  tickets de 4 partidos y La soñadora de 8 (aplican desde la próxima tanda). Clave BSD
+  comprobada (103 competiciones con EL 8, Conference 83, CL 7, Libertadores 32,
+  Sudamericana 33, Liga MX 19/20, MLS 18; sin Concachampions; historial desde 2022;
+  límite 7500/día, 200 por página) y guardada en backend/.env como BSD_TOKEN (no en
+  Vercel). Descarga única en backend/data/bsd (ignorado) para backtest de copas.

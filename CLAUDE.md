@@ -69,15 +69,15 @@ clave debug de firma y número de versión creciente).
 
 ## Arquitectura
 
-Producto: **3 tickets over 2.5 de 3 partidos** (umbral por partido 0.67 en los tres,
+Producto: **3 tickets over 2.5 de 4 partidos** (umbral por partido 0.67 en los tres,
 `TICKET_THRESHOLDS` admite escalonar, p. ej. "0.67,0.65,0.63"; si un nivel no se llena,
 sus partidos bajan al siguiente; cada over 2.5 que falte se cambia por 2 over 1.5 con ≥ √umbral, de
 los partidos que no son candidatos a over 2.5) por tanda, sin repetir
-partidos (`TICKET_COUNT`, `TICKET_MARKET`, `TICKET_LEGS` = 3, 4 o 6; over 1.5 con 6 partidos y
+partidos (`TICKET_COUNT`, `TICKET_MARKET`, `TICKET_LEGS` = 3, 4 (por defecto) o 6; over 1.5 con 6 partidos y
 umbral 0.80 sigue disponible y ahí se excluyen LaLiga y Serie A, `MARKET_BLOCKED`).
 Además, el ticket especial **"La soñadora"** (`dreamerTicket`, `kind: 'dreamer'`):
-6 over 2.5 (≥0.60, también en partidos de API-Football; mismo respaldo de 2 over 1.5
-con ≥0.78 por cada over 2.5 que falte, hasta 12 partidos; migración 012) con partidos que no usan los normales; `TICKET_DREAMER=false` lo
+8 over 2.5 (≥0.60, también en partidos de API-Football; mismo respaldo de 2 over 1.5
+con ≥0.78 por cada over 2.5 que falte, hasta 16 partidos; migraciones 012 y 017) con partidos que no usan los normales; `TICKET_DREAMER=false` lo
 apaga. Requiere migración 008; si la base lo rechaza, la tanda se publica sin él.
 "El arriesgado del día" (`kind: 'risky'`) ya no se genera, pero la base y la app
 siguen leyendo tandas antiguas con él. La API liquida según el mercado de cada
@@ -137,6 +137,9 @@ envía a todos los teléfonos el estado ("Siguen activos: ticket 1 y 3…", clav
   (`featuresFromHistory`) y respeta `FC_VALIDATION` por mercado; settle lee la tabla
   (por id o por equipos ±1 día). Sus ligas cuentan como cubiertas para API-Football
   (sin duplicados). IDs `fc-`. `FC_COMPETITIONS` (`none` desactiva).
+- Copas europeas: **no** entran. Champions (football-data, gratis) probada el 2026-11-21
+  con la liga local de cada equipo: ≥0.67 acertó 58.8% (34 sel.) frente a 61% base, sin
+  capacidad de distinguir; Europa y Conference League no están en el plan gratuito.
 - `src/football/`: módulo independiente de información de partidos con ocho
   adaptadores (`providers.js`), normalizador común, transporte HTTP secuencial con
   límite de 2 MB por respuesta (`http.js`, compartido con `FootballData` para

@@ -108,7 +108,7 @@ test('over 1.5: Poisson, resultado y tickets de 6 partidos', async () => {
   assert.ok(none.rejections.every(r => /bajo acierto/.test(r.reason)));
 });
 
-test('La soñadora: 6 over 2.5 sin repetir partidos de los normales', async () => {
+test('La soñadora: 8 over 2.5 sin repetir partidos de los normales', async () => {
   const { dreamerTicket, DREAMER } = await import('../src/tickets.js');
   const now = Date.parse('2026-11-05T17:00:00Z'), snapshot = demoSnapshot(now);
   // Con los normales llenos (4 × 4 de 20 partidos) quedan 4 libres: no se fuerza.
@@ -122,9 +122,9 @@ test('La soñadora: 6 over 2.5 sin repetir partidos de los normales', async () =
   assert.equal(normal.length, 1);
   assert.ok(dreamer);
   assert.equal(dreamer.name, DREAMER.name);
-  assert.deepEqual(dreamer.selections.map(s => s.market), Array(6).fill('OVER_2_5'));
+  assert.deepEqual(dreamer.selections.map(s => s.market), Array(DREAMER.picks).fill('OVER_2_5'));
   assert.ok(dreamer.selections.every(s => !normalIds.has(s.match.id) && s.prediction.probability >= DREAMER.min));
-  assert.equal(new Set(dreamer.selections.map(s => s.match.id)).size, 6);
+  assert.equal(new Set(dreamer.selections.map(s => s.match.id)).size, 8);
   assert.equal(dreamer.number, 2);
   assert.ok(Math.abs(dreamer.probability - dreamer.selections.reduce((p, s) => p * s.prediction.probability, 1)) < 1e-12);
   assert.ok(batch.warnings.some(w => w.startsWith(DREAMER.name)));
@@ -143,10 +143,10 @@ test('La soñadora: 6 over 2.5 sin repetir partidos de los normales', async () =
   const { formPredict } = await import('../src/apifootball.js');
   const goals = Array.from({ length: 40 }, (_, i) => 3 + i * 0.025).find(g => { const p = formPredict(form(0, g), form(0, g).formFeatures, { line: 2.5, asOf: now }).probability; return p >= 0.62 && p < 0.65; });
   assert.ok(goals, 'hay un partido entre 0.62 y 0.65');
-  const mid = Array.from({ length: 6 }, (_, i) => form(i + 1, goals));
+  const mid = Array.from({ length: 8 }, (_, i) => form(i + 1, goals));
   const midBatch = generateBatch({ ...snapshot, fixtures: mid }, { now, minProbability: 0.65, maxTickets: 3, dreamer: true });
   assert.equal(midBatch.tickets.filter(t => t.kind !== 'dreamer').length, 0); // ninguno llega a 0.65
-  assert.equal(midBatch.tickets.find(t => t.kind === 'dreamer')?.selections.length, 6);
+  assert.equal(midBatch.tickets.find(t => t.kind === 'dreamer')?.selections.length, 8);
   assert.deepEqual(resultOf({ status: 'FINISHED', homeGoals: 2, awayGoals: 2 }, 'OVER_3_5'), { result: 'won', score: '2–2' });
   assert.equal(resultOf({ status: 'FINISHED', homeGoals: 2, awayGoals: 1 }, 'OVER_3_5').result, 'lost');
 });
@@ -191,7 +191,7 @@ test('tickets escalonados: 0.65 / 0.63 / 0.62 y La soñadora desde 0.60', async 
   assert.ok(Object.values(bands).every(Boolean));
   let n = 0;
   const make = (g, k) => Array.from({ length: k }, () => form(n++, g));
-  const snapshot = { ...base, fixtures: [...make(bands.a, 3), ...make(bands.b, 3), ...make(bands.c, 3), ...make(bands.d, 6)] };
+  const snapshot = { ...base, fixtures: [...make(bands.a, 3), ...make(bands.b, 3), ...make(bands.c, 3), ...make(bands.d, 8)] };
   const batch = generateBatch(snapshot, { now, minProbability: 0.65, legs: 3, dreamer: true, ticketThresholds: [0.65, 0.63, 0.62] });
   const normal = batch.tickets.filter(t => t.kind !== 'dreamer'), dreamer = batch.tickets.find(t => t.kind === 'dreamer');
   assert.deepEqual(normal.map(t => t.threshold), [0.65, 0.63, 0.62]);
@@ -242,7 +242,7 @@ test('respaldo over 1.5: cada over 2.5 que falta se cambia por 2 over 1.5 con �
   assert.equal(short.tickets.length, 0);
   assert.equal(short.missingMatches, 3);
 });
-test('La soñadora con respaldo: cada over 2.5 que falta son 2 over 1.5 (hasta 12 partidos)', async () => {
+test('La soñadora con respaldo: cada over 2.5 que falta son 2 over 1.5 (hasta 16 partidos)', async () => {
   const { formPredict } = await import('../src/apifootball.js');
   const now = Date.parse('2026-11-05T17:00:00Z'), base = demoSnapshot(now);
   const kick = new Date(now + 5 * 3_600_000).toISOString();
@@ -257,21 +257,21 @@ test('La soñadora con respaldo: cada over 2.5 que falta son 2 over 1.5 (hasta 1
   const g15 = grid.find(g => p(g, 2.5) < 0.6 && p(g, 1.5) >= 0.79); // solo sirve de respaldo over 1.5
   assert.ok(g60 && g15);
   n = 0;
-  // 4 over 2.5 para ella + 4 over 1.5 → faltan 2 → 4 + 4 = 8 partidos.
-  const fixtures = [...Array.from({ length: 4 }, () => form(g60)), ...Array.from({ length: 4 }, () => form(g15))];
+  // 6 over 2.5 para ella + 4 over 1.5 → faltan 2 → 6 + 4 = 10 partidos.
+  const fixtures = [...Array.from({ length: 6 }, () => form(g60)), ...Array.from({ length: 4 }, () => form(g15))];
   // Umbral normal inalcanzable (0.95) para aislar a La soñadora.
   const batch = generateBatch({ ...base, fixtures }, { now, legs: 3, dreamer: true, ticketThresholds: [0.95] });
   const d = batch.tickets.find(t => t.kind === 'dreamer');
   assert.ok(d);
-  assert.deepEqual(d.selections.map(s => s.market), [...Array(4).fill('OVER_2_5'), ...Array(4).fill('OVER_1_5')]);
-  assert.ok(batch.warnings.some(w => w.startsWith('La soñadora: 4 over 2.5 + 4 over 1.5')));
-  // Ningún over 2.5: 12 over 1.5.
+  assert.deepEqual(d.selections.map(s => s.market), [...Array(6).fill('OVER_2_5'), ...Array(4).fill('OVER_1_5')]);
+  assert.ok(batch.warnings.some(w => w.startsWith('La soñadora: 6 over 2.5 + 4 over 1.5')));
+  // Ningún over 2.5: 16 over 1.5.
   n = 0;
-  const all15 = generateBatch({ ...base, fixtures: Array.from({ length: 12 }, () => form(g15)) }, { now, legs: 3, dreamer: true, ticketThresholds: [0.95] });
-  assert.equal(all15.tickets.find(t => t.kind === 'dreamer')?.selections.length, 12);
+  const all15 = generateBatch({ ...base, fixtures: Array.from({ length: 16 }, () => form(g15)) }, { now, legs: 3, dreamer: true, ticketThresholds: [0.95] });
+  assert.equal(all15.tickets.find(t => t.kind === 'dreamer')?.selections.length, 16);
   // Sin respaldo suficiente no se forma.
   n = 0;
-  assert.equal(generateBatch({ ...base, fixtures: [...Array.from({ length: 4 }, () => form(g60)), form(g15)] },
+  assert.equal(generateBatch({ ...base, fixtures: [...Array.from({ length: 6 }, () => form(g60)), form(g15)] },
     { now, legs: 3, dreamer: true, ticketThresholds: [0.95] }).tickets.some(t => t.kind === 'dreamer'), false);
 });
 test('ligas solo de respaldo (validadas en over 1.5) nunca entran como over 2.5', async () => {
