@@ -159,6 +159,17 @@ test('bsd_matches (018): ids con namespace, marcador en terminados y solo servic
   assert.equal((await db.query('select count(*)::int n from public.bsd_matches')).rows[0].n, 2);
 });
 
+test('bsd_absences (019): una foto por equipo y día, lista de jugadores y solo service_role', async () => {
+  const cols = 'day, team, team_name, match_id, kickoff, squad_size, players';
+  await db.exec(`set role service_role;
+    insert into public.bsd_absences(${cols}) values ('2026-11-22', 'bsd-79', 'Bayern', 'bsd-1', now(), 26, '[{"name":"Kane","availability":"injured"}]');
+    reset role;`);
+  await assert.rejects(db.exec(`insert into public.bsd_absences(${cols}) values ('2026-11-22', 'bsd-79', 'Bayern', 'bsd-1', now(), 26, '[]')`), /duplicate key/);
+  await assert.rejects(db.exec(`insert into public.bsd_absences(${cols}) values ('2026-11-22', 'bsd-80', 'X', 'bsd-1', now(), 26, '{}')`), /check/);
+  await assert.rejects(db.exec('set role anon; select * from public.bsd_absences;'), /permission denied/);
+  await db.exec('reset role;');
+});
+
 test('csv_matches exige marcador en partidos terminados y solo admite service_role', async () => {
   await db.exec(`set role service_role;
     insert into public.csv_sync_runs default values;

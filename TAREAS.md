@@ -12,6 +12,7 @@ Estados: ⏳ pendiente · 🔧 en proceso · ✅ hecho · ⏸️ en espera.
 | 6 | Football Charts como fuente (98 ligas, 200 consultas/día gratis, uso personal con atribución) | ✅ en producción · ⏳ primera carga hoy 20:08 | 22 ligas validadas (15 en over 2.5, 19 en over 1.5). Clave en Vercel, migraciones 013/014 aplicadas, código subido. El primer intento falló por partidos repetidos (29 de 9277) y gastó la cuota del día; corregido (sin repetidos, freno a 5 consultas, no sigue sin catálogo). La cuota vuelve a las 17:00 y el cron de las 20:08 hace la primera carga. 87/87. |
 | 7 | Resultados internacionales (CC0) para validar partidos de selecciones | ⏳ pendiente | Para fechas FIFA como esta semana. |
 | 8 | Tickets de hasta 7 días (umbral 0.67), aviso diario 23:45 y tickets nuevos al resolverse todos; arreglar aviso de ticket ganado | ✅ en producción · ⏳ instalar APK v6 | Causa del aviso: ningún teléfono registrado (`devices` vacía). La app ahora activa los avisos sola. 016, código y APK v6 publicados. Backend 95/95, app 19/19. |
+| 9 | Medir el efecto de las bajas (bsd_absences) en los goles y, si sirve, meterlas al modelo | ⏳ juntando datos | Se guardan desde el 2026-11-22; revisar en febrero 2027. El ajuste por contexto de copa (ida/vuelta/final) se midió y no se usa (inestable). |
 | 4 | Plan de pago de API-Football | ⏸️ en espera | Solo si 1-3 no alcanzan. Revisar precio antes. |
 
 ## Bitácora

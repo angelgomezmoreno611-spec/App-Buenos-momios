@@ -243,6 +243,17 @@ export class SupabaseRepository {
     const rows = await this.request(`bsd_matches?id=in.(${encodeURIComponent(list)})&status=in.(FINISHED,POSTPONED,CANCELLED,SUSPENDED,UNKNOWN)&select=*`);
     return rows.map(r => this.#bsdRow(r));
   }
+  // Bajas por equipo y día (job bsd).
+  async bsdAbsenceTeams(day) {
+    const rows = await this.request(`bsd_absences?day=eq.${day}&select=team&limit=5000`);
+    return new Set(rows.map(r => r.team));
+  }
+  async storeBsdAbsences(rows) {
+    if (!rows.length) return;
+    await this.request('bsd_absences?on_conflict=day,team', { method: 'POST', headers: { Prefer: 'resolution=merge-duplicates,return=minimal' },
+      body: rows.map(r => ({ day: r.day, team: r.team, team_name: r.teamName, match_id: r.matchId, kickoff: r.kickoff,
+        squad_size: r.squadSize, players: r.players })) });
+  }
   // API-Football (plan gratuito): consultas gastadas por día y listas ya bajadas.
   async afUsage(day) {
     const rows = await this.request(`af_usage?day=eq.${day}&select=calls,lists_done`);

@@ -4,7 +4,7 @@ import { lambdaFromOver15, featuresFromHistory } from './apifootball.js';
 import { syncCsv, CSV_LEAGUES, CSV_VALIDATION } from './csvleagues.js';
 import { oldbSnapshot, oldbResults, OLDB_LEAGUES, OLDB_VALIDATION, OLDB_ATTRIBUTION } from './openliga.js';
 import { syncFc, fcBlocked, FC_ATTRIBUTION } from './footballcharts.js';
-import { bsdEvents, bsdBlocked, BSD_CROSS, BSD_ATTRIBUTION } from './bsd.js';
+import { bsdEvents, bsdBlocked, absencesOf, BSD_CROSS, BSD_ATTRIBUTION, BSD_ABSENCE_EXTRA } from './bsd.js';
 
 const DAY = 86_400_000;
 // Ligas de año natural (Brasileirão): la temporada AAAA se juega de abril a diciembre.
@@ -254,8 +254,28 @@ export async function runJob(kind, { repo, provider, push, timeZone, minProbabil
       const utc = t => new Date(t).toISOString().slice(0, 10);
       const matches = await bsdEvents(utc(now - 3 * DAY), utc(now + 8 * DAY), { get: bsd.get });
       await repo.storeBsdMatches(matches, now - 400 * DAY);
-      return { stored: matches.length, finished: matches.filter(m => m.status === 'FINISHED').length,
+      const out = { stored: matches.length, finished: matches.filter(m => m.status === 'FINISHED').length,
         upcoming: matches.filter(m => m.status === 'TIMED').length };
+      // Bajas: una foto por equipo y día de los que juegan en las próximas 30 h (ligas
+      // activas y copas a medir). Hasta `absencesPerRun` equipos por vuelta; el resto,
+      // en las siguientes horas. Si falla, los partidos ya quedaron guardados.
+      try {
+        const leagues = new Set([...(bsd.leagues ?? []), ...BSD_ABSENCE_EXTRA]), day = utc(now);
+        const done = await repo.bsdAbsenceTeams(day), due = [];
+        for (const m of matches.filter(m => m.status === 'TIMED' && leagues.has(m.league.id) && Date.parse(m.kickoff) > now
+            && Date.parse(m.kickoff) <= now + 30 * 3_600_000).sort((a, b) => a.kickoff.localeCompare(b.kickoff))) {
+          for (const team of [m.home, m.away]) if (!done.has(team.id) && !due.some(d => d.team === team.id)) due.push({ team: team.id, teamName: team.name, matchId: m.id, kickoff: m.kickoff });
+        }
+        const rows = [];
+        for (const d of due.slice(0, bsd.absencesPerRun ?? 40)) {
+          if (Date.now() > deadline - 5000) break;
+          const squad = await bsd.get(`/teams/${d.team.slice(4)}/squad/`);
+          rows.push({ ...d, day, ...absencesOf(squad) });
+        }
+        await repo.storeBsdAbsences(rows);
+        out.absences = { recorded: rows.length, pending: due.length - rows.length };
+      } catch (error) { out.absences = { error: error.message }; }
+      return out;
     }
     if (kind === 'notify') return deliverNotifications(repo, push, deadline);
     throw new Error('Tarea desconocida');

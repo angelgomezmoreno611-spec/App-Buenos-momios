@@ -72,3 +72,14 @@ export async function bsdEvents(from, to, { get, maxPages = 40 }) {
   }
   return out;
 }
+
+// Bajas de un equipo (squad de BSD): solo quienes no están disponibles. "available" es
+// el valor por defecto ("no reportado como baja"), no una confirmación de que juega.
+export function absencesOf(squad) {
+  const players = Array.isArray(squad?.players) ? squad.players : [];
+  return { squadSize: players.length, players: players.filter(p => ['injured', 'doubtful', 'suspended'].includes(p?.availability))
+    .map(p => ({ id: p.id, name: p.name, position: p.position ?? null, availability: p.availability,
+      injuryType: p.injury_type || null, expectedReturn: p.injury_expected_return ?? null })) };
+}
+// Ligas cuyas bajas se guardan: las activas más las copas que se quieren medir.
+export const BSD_ABSENCE_EXTRA = Object.freeze(['bsd-7', 'bsd-83']);

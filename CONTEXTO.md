@@ -878,3 +878,15 @@ No se dejaron servidores activos ni se desplegó el proyecto.
   Generación de prueba local con datos reales SIN publicar (publish interceptado):
   19 s, 3 tickets de 4 + soñadora de 8, 10 selecciones de BSD (Eliteserien, MLS, Suiza,
   National League, Liga F). La próxima tanda real sale cuando se resuelva la actual.
+- 2026-11-22: el usuario pide considerar bajas y contexto (final cerrada, ida/vuelta,
+  quien va abajo en el global). Medido con BSD (CL, EL, Conference, Libertadores,
+  Sudamericana 2022-2026, 5438 partidos): o2.5 finales 40.9% (22), ida 46.4% (1502),
+  vuelta 55.7% (1502), vuelta con visitante abajo 58.9% (438). Ajuste del modelo por
+  contexto (factor sobre goles esperados, ajustado <2025-07 y probado después, script
+  scratchpad bt-context.mjs): inestable (vuelta local abajo 0.86 → 1.15, definida 0.87
+  → 1.29); CL o2.5 ≥0.67 59.6% → 64.9% (74) y prueba 61.5% → 67.6% (34) pero ≥0.70
+  empeora; EL o1.5 prueba baja 90.5% → 84%. Decisión: NO se usa en el modelo.
+  Bajas: BSD /teams/{id}/squad/ (availability injured/doubtful/suspended, tipo y
+  regreso) solo del momento actual, sin historia → se empieza a guardar: migración 019
+  (bsd_absences) aplicada, job bsd guarda ≤40 equipos/vuelta de partidos en ≤30 h (ligas
+  activas + CL y Conference). Revisar su efecto en ~2-3 meses (febrero 2027). 107/107.

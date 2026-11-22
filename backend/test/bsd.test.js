@@ -53,14 +53,38 @@ test('BSD: recorre todas las páginas con la ruta relativa de `next`', async () 
 
 test('job bsd: ventana de 3 días atrás a 8 adelante y limpieza a 400 días', async () => {
   const now = Date.parse('2026-11-22T12:00:00Z'), stored = [];
-  const repo = { acquireLock: async () => 'l', releaseLock: async () => {}, storeBsdMatches: async (m, before) => stored.push([m.length, before]) };
+  const repo = { acquireLock: async () => 'l', releaseLock: async () => {}, storeBsdMatches: async (m, before) => stored.push([m.length, before]),
+    bsdAbsenceTeams: async () => new Set(), storeBsdAbsences: async () => {} };
   let path;
   const out = await runJob('bsd', { repo, now, bsd: { leagues: ['bsd-18'], get: async p => { path = p;
     return { results: [ev(1, 18, 1, 2, '2026-11-21T01:00:00Z'), ev(2, 18, 3, 4, '2026-11-25T01:00:00Z', 'notstarted')], next: null }; } } });
   assert.equal(path, '/events/?date_from=2026-11-19&date_to=2026-11-30&limit=200');
-  assert.deepEqual(out, { stored: 2, finished: 1, upcoming: 1 });
+  assert.deepEqual(out, { stored: 2, finished: 1, upcoming: 1, absences: { recorded: 0, pending: 0 } }); // el 25 queda a más de 30 h
   assert.deepEqual(stored, [[2, now - 400 * DAY]]);
   assert.deepEqual(await runJob('bsd', { repo, now }), { skipped: true, reason: 'Falta BSD_TOKEN' });
+});
+
+test('job bsd guarda las bajas de los equipos que juegan en las próximas 30 h, una vez por día', async () => {
+  const now = Date.parse('2026-11-22T12:00:00Z'), saved = [], asked = [];
+  const repo = { acquireLock: async () => 'l', releaseLock: async () => {}, storeBsdMatches: async () => {},
+    bsdAbsenceTeams: async day => { assert.equal(day, '2026-11-22'); return new Set(['bsd-3']); }, storeBsdAbsences: async rows => saved.push(...rows) };
+  const events = [ev(1, 18, 1, 2, '2026-11-22T20:00:00Z', 'notstarted'), ev(2, 7, 3, 4, '2026-11-23T10:00:00Z', 'notstarted'),
+    ev(3, 1, 5, 6, '2026-11-22T20:00:00Z', 'notstarted'), ev(4, 18, 7, 8, '2026-11-24T20:00:00Z', 'notstarted')];
+  const squad = { players: [{ id: 9, name: 'Kane', position: 'F', availability: 'injured', injury_type: 'Ankle Injury', injury_expected_return: '2027-01-31' },
+    { id: 10, name: 'Olise', position: 'M', availability: 'doubtful', injury_type: '', injury_expected_return: null },
+    { id: 11, name: 'Musiala', position: 'M', availability: 'available', injury_type: '', injury_expected_return: null }] };
+  const out = await runJob('bsd', { repo, now, bsd: { leagues: ['bsd-18'], absencesPerRun: 2, get: async p => {
+    asked.push(p); return p.startsWith('/events/') ? { results: events, next: null } : squad; } } });
+  // MLS (activa) y Champions (copa a medir) en ≤30 h; Premier (no activa) y el partido del 24, fuera; bsd-3 ya estaba hoy.
+  assert.deepEqual(asked.slice(1), ['/teams/1/squad/', '/teams/2/squad/']);
+  assert.deepEqual(out.absences, { recorded: 2, pending: 1 }); // bsd-4 queda para la siguiente vuelta
+  assert.deepEqual(saved[0], { team: 'bsd-1', teamName: 'T1', matchId: 'bsd-1', kickoff: '2026-11-22T20:00:00.000Z', day: '2026-11-22', squadSize: 3,
+    players: [{ id: 9, name: 'Kane', position: 'F', availability: 'injured', injuryType: 'Ankle Injury', expectedReturn: '2027-01-31' },
+      { id: 10, name: 'Olise', position: 'M', availability: 'doubtful', injuryType: null, expectedReturn: null }] });
+  // Si fallan las bajas, los partidos ya están guardados y el job no falla.
+  const broken = await runJob('bsd', { repo: { ...repo, bsdAbsenceTeams: async () => { throw new Error('sin tabla'); } }, now,
+    bsd: { leagues: ['bsd-18'], get: async () => ({ results: events, next: null }) } });
+  assert.deepEqual(broken.absences, { error: 'sin tabla' });
 });
 
 // Historial goleador: equipos 1-8 en MLS (bsd-18) y 9-16 en Liga MX (bsd-19, solo respaldo).

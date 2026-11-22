@@ -143,7 +143,10 @@ envía a todos los teléfonos el estado ("Siguen activos: ticket 1 y 3…", clav
   Ligas activas = `BSD_VALIDATION` (backtest 2026-11-22; `BSD_COMPETITIONS`, `none`
   desactiva); las que toma se quitan de CSV/Football Charts (`BSD_REPLACES`). La Europa
   League (solo respaldo over 1.5) se calcula con la liga local de cada equipo
-  (`crossPredict` en `model.js`, `crossLeague` en el partido). IDs `bsd-`.
+  (`crossPredict` en `model.js`, `crossLeague` en el partido). IDs `bsd-`. El mismo job
+  guarda cada día las bajas (lesionados/dudosos/suspendidos, `/teams/{id}/squad/`) de los
+  equipos que juegan en ≤30 h en `bsd_absences` (migración 019, ≤40 equipos por vuelta);
+  todavía NO alimentan el modelo: son para medir su efecto más adelante.
 - Copas europeas: salvo la Europa League como respaldo over 1.5, **no** entran. Champions (football-data, gratis) probada el 2026-11-21
   con la liga local de cada equipo: ≥0.67 acertó 58.8% (34 sel.) frente a 61% base, sin
   capacidad de distinguir; Europa y Conference League no están en el plan gratuito.
