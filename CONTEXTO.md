@@ -799,3 +799,13 @@ No se dejaron servidores activos ni se desplegó el proyecto.
   Luego comprobar que `devices` tenga un registro y que llegue el aviso de las 23:45.
   Supuesto: la API-Football solo da partidos hasta mañana, así que los partidos de días
   3–7 vienen de football-data.org, CSV, OpenLigaDB y Football Charts.
+- 2026-11-21 (20:10 Mazatlán): comprobado en producción: el aviso de estado de las
+  23:45 del 20 se envió ("3 de 4 tickets siguen activos") y el teléfono está en
+  `devices`. El ticket 3 de la tanda 2026-11-20 ganó (15:20 UTC) pero su aviso quedó
+  pendiente con 0 intentos: el cron momios-notify falla SIEMPRE desde pg_net con
+  "Error in the HTTP2 framing layer" (net._http_response), mientras settle/fc con el
+  mismo formato responden 200; reproducido con net.http_post manual. Desde curl local
+  /api/jobs/notify funciona (se envió a mano: sent 1). Causa exacta no identificada.
+  Arreglo: settle entrega los avisos al terminar de liquidar (notify queda de respaldo).
+  96/96. La tanda del 20 ya está resuelta (1 ganado, 3 perdidos): generate de las
+  23:45 del 21 debe crear la primera tanda de 7 días y avisar.

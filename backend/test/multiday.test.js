@@ -107,3 +107,18 @@ test('generate publica la tanda aunque falle la cola de avisos (sin migración 0
   assert.ok(repo.calls.published);
   assert.deepEqual(out.notice, { error: 'Base de datos: HTTP 404' });
 });
+
+test('settle envía en la misma ejecución los avisos de ticket ganado', async () => {
+  const sent = [];
+  const repo = { acquireLock: async () => 'l', releaseLock: async () => {},
+    pendingMatches: async () => [{ match_id: 'af-1', market: 'OVER_2_5' }],
+    afResults: async () => [{ id: 'af-1', status: 'FINISHED', homeGoals: 2, awayGoals: 1 }],
+    applyResults: async () => {},
+    claimNotifications: async () => sent.length ? [] : [{ id: 'n1', lease: 'x', user_id: 'u', token: 'tok', ticket_id: 't3', attempts: 1 }],
+    ownsDevice: async () => true, finishNotification: async (id, lease, status) => sent.push([id, status]) };
+  const push = { configured: true, send: async () => 'sent' };
+  const out = await runJob('settle', { repo, push, provider: { results: async () => [] } });
+  assert.equal(out.checked, 1);
+  assert.deepEqual(out.notified, { sent: 1, failed: 0 });
+  assert.deepEqual(sent, [['n1', 'sent']]);
+});

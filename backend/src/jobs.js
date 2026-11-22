@@ -163,7 +163,13 @@ export async function runJob(kind, { repo, provider, push, timeZone, minProbabil
         results.push(...matches.map(m => ({ matchId: m.id, ...resultOf(m, marketOf.get(m.id)) })));
       }
       if (results.length) await repo.applyResults(results);
-      return { checked: results.length, remaining: Math.max(0, all.length - results.length) };
+      // Los avisos de ticket ganado se crean al liquidar: se envían aquí mismo. El cron
+      // momios-notify falla desde pg_net ("Error in the HTTP2 framing layer") y queda de respaldo.
+      let notified = null;
+      if (results.length && push?.configured) {
+        notified = await deliverNotifications(repo, push, deadline).catch(error => ({ error: error.message }));
+      }
+      return { checked: results.length, remaining: Math.max(0, all.length - results.length), ...(notified ? { notified } : {}) };
     }
     if (kind === 'history') {
       const stored = new Set(await repo.storedSeasons());
