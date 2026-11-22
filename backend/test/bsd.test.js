@@ -14,7 +14,7 @@ const ev = (id, league, home, away, date, status = 'finished', hs = 2, as = 1) =
 test('BSD: normaliza estados, ids con namespace, Liga MX unida y copas marcadas', () => {
   const m = normalizeBsd(ev(1, 18, 10, 11, '2026-11-20T01:00:00+00:00'));
   assert.deepEqual(m, { id: 'bsd-1', league: { id: 'bsd-18', name: 'MLS' }, kickoff: '2026-11-20T01:00:00.000Z', status: 'FINISHED',
-    home: { id: 'bsd-10', name: 'T10' }, away: { id: 'bsd-11', name: 'T11' }, homeGoals: 2, awayGoals: 1, cup: false });
+    home: { id: 'bsd-10', name: 'T10' }, away: { id: 'bsd-11', name: 'T11' }, homeGoals: 2, awayGoals: 1, cup: false, neutral: false });
   assert.equal(normalizeBsd(ev(2, 20, 1, 2, '2026-11-20T01:00:00Z', 'notstarted')).league.id, 'bsd-19'); // Clausura = Liga MX
   assert.equal(normalizeBsd(ev(3, 8, 1, 2, '2026-11-26T20:00:00Z', 'notstarted')).cup, true);
   assert.equal(normalizeBsd(ev(4, 1, 1, 2, '2026-11-20T01:00:00Z', 'postponed')).status, 'POSTPONED');

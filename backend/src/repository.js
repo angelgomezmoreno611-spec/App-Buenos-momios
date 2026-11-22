@@ -208,7 +208,7 @@ export class SupabaseRepository {
   async storeBsdMatches(matches, before) {
     const unique = new Map(matches.map(m => [m.id, m]));
     const rows = [...unique.values()].map(m => ({
-      id: m.id, league: m.league.id, league_name: m.league.name, cup: Boolean(m.cup), kickoff: m.kickoff,
+      id: m.id, league: m.league.id, league_name: m.league.name, cup: Boolean(m.cup), neutral: Boolean(m.neutral), kickoff: m.kickoff,
       home_id: m.home.id, home_name: m.home.name ?? '', away_id: m.away.id, away_name: m.away.name ?? '',
       status: m.status, home_goals: m.homeGoals, away_goals: m.awayGoals, synced_at: new Date().toISOString()
     }));
@@ -219,7 +219,7 @@ export class SupabaseRepository {
     if (before) await this.request(`bsd_matches?kickoff=lt.${encodeURIComponent(new Date(before).toISOString())}`, { method: 'DELETE' });
   }
   #bsdRow(r) {
-    return { id: r.id, league: { id: r.league, name: r.league_name }, cup: r.cup, kickoff: new Date(r.kickoff).toISOString(),
+    return { id: r.id, league: { id: r.league, name: r.league_name }, cup: r.cup, neutral: Boolean(r.neutral), kickoff: new Date(r.kickoff).toISOString(),
       status: r.status, home: { id: r.home_id, name: r.home_name }, away: { id: r.away_id, name: r.away_name },
       homeGoals: r.home_goals, awayGoals: r.away_goals };
   }
@@ -242,6 +242,33 @@ export class SupabaseRepository {
     const list = ids.map(id => `"${id.replace(/["\\]/g, '')}"`).join(',');
     const rows = await this.request(`bsd_matches?id=in.(${encodeURIComponent(list)})&status=in.(FINISHED,POSTPONED,CANCELLED,SUSPENDED,UNKNOWN)&select=*`);
     return rows.map(r => this.#bsdRow(r));
+  }
+  // Modelo de fuerza: todos los resultados desde `since` (solo las columnas necesarias).
+  async bsdResultsSince(since) {
+    const out = [], filter = `status=eq.FINISHED&kickoff=gte.${encodeURIComponent(new Date(since).toISOString())}`;
+    for (let offset = 0; offset < 200_000; offset += 1000) {
+      const rows = await this.request(`bsd_matches?${filter}&select=id,kickoff,home_id,away_id,home_goals,away_goals,neutral&order=id.asc&limit=1000&offset=${offset}`);
+      out.push(...rows.map(r => ({ id: r.id, kickoff: r.kickoff, home: { id: r.home_id }, away: { id: r.away_id },
+        homeGoals: r.home_goals, awayGoals: r.away_goals, neutral: r.neutral })));
+      if (rows.length < 1000) break;
+    }
+    return out;
+  }
+  async storeRatings({ mu, home, teams, matches, fittedAt }) {
+    const upsert = { Prefer: 'resolution=merge-duplicates,return=minimal' };
+    const rows = teams.map(t => ({ team: t.team, attack: t.attack, defense: t.defense, games: t.games, fitted_at: fittedAt }));
+    for (let i = 0; i < rows.length; i += 500) await this.request('bsd_ratings?on_conflict=team', { method: 'POST', body: rows.slice(i, i + 500), headers: upsert });
+    // Equipos que ya no tienen partidos en la ventana: fuera.
+    await this.request(`bsd_ratings?fitted_at=lt.${encodeURIComponent(fittedAt)}`, { method: 'DELETE' });
+    await this.request('bsd_rating_meta?on_conflict=singleton', { method: 'POST', headers: upsert,
+      body: [{ singleton: true, mu, home, matches, fitted_at: fittedAt }] });
+  }
+  async ratings(teams) {
+    if (!teams.length) return null;
+    const [meta] = await this.request('bsd_rating_meta?select=mu,home,fitted_at');
+    if (!meta) return null;
+    const rows = await this.request(`bsd_ratings?team=in.(${teams.map(t => encodeURIComponent(t)).join(',')})&select=team,attack,defense,games`);
+    return { mu: meta.mu, home: meta.home, fittedAt: new Date(meta.fitted_at).toISOString(), teams: new Map(rows.map(r => [r.team, r])) };
   }
   // Bajas por equipo y día (job bsd).
   async bsdAbsenceTeams(day) {

@@ -45,7 +45,7 @@ export function createApp({ mode = 'live', repo, provider, push, cronSecret, tim
         if (!['GET', 'POST'].includes(req.method)) return send(res, 405, { error: 'Método no permitido' });
         if (!secretEquals(req.headers.authorization, cronSecret ? `Bearer ${cronSecret}` : '')) return send(res, 401, { error: 'No autorizado' });
         const kind = path.split('/').at(-1);
-        if (!['generate', 'settle', 'notify', 'history', 'csv', 'discover', 'fc', 'bsd'].includes(kind)) return send(res, 404, { error: 'Tarea desconocida' });
+        if (!['generate', 'settle', 'notify', 'history', 'csv', 'discover', 'fc', 'bsd', 'ratings'].includes(kind)) return send(res, 404, { error: 'Tarea desconocida' });
         if (mode === 'demo') return send(res, 409, { error: 'Las tareas reales están desactivadas en demo' });
         // discover usa otra fuente y otras tablas: no toma el lock compartido.
         if (kind === 'discover') return send(res, 200, await runDiscover({ repo, key: apiFootball?.key, fetcher: apiFootball?.fetcher, timeZone }));

@@ -4,7 +4,8 @@ import { lambdaFromOver15, featuresFromHistory } from './apifootball.js';
 import { syncCsv, CSV_LEAGUES, CSV_VALIDATION } from './csvleagues.js';
 import { oldbSnapshot, oldbResults, OLDB_LEAGUES, OLDB_VALIDATION, OLDB_ATTRIBUTION } from './openliga.js';
 import { syncFc, fcBlocked, FC_ATTRIBUTION } from './footballcharts.js';
-import { bsdEvents, bsdBlocked, absencesOf, BSD_CROSS, BSD_ATTRIBUTION, BSD_ABSENCE_EXTRA } from './bsd.js';
+import { bsdEvents, bsdBlocked, absencesOf, BSD_CROSS, BSD_STRENGTH, BSD_ATTRIBUTION, BSD_ABSENCE_EXTRA } from './bsd.js';
+import { fitStrength } from './strength.js';
 
 const DAY = 86_400_000;
 // Ligas de año natural (Brasileirão): la temporada AAAA se juega de abril a diciembre.
@@ -133,7 +134,14 @@ export async function runJob(kind, { repo, provider, push, timeZone, minProbabil
           snapshot.history.push(...[...rows, ...local].filter(m => m.status === 'FINISHED')
             .map(m => ({ ...m, availableAt: new Date(Date.parse(m.kickoff) + 3 * 3_600_000).toISOString() }))
             .filter(m => Date.parse(m.availableAt) <= now));
-          snapshot.fixtures = [...snapshot.fixtures, ...upcoming.map(m => cross.has(m.league.id) ? { ...m, crossLeague: true } : m)];
+          // Champions: modelo de fuerza (ataque/defensa ajustados por el job ratings).
+          const strong = upcoming.filter(m => BSD_STRENGTH.has(m.league.id));
+          const ratings = strong.length ? await Promise.resolve()
+            .then(() => repo.ratings([...new Set(strong.flatMap(m => [m.home.id, m.away.id]))])).catch(() => null) : null;
+          const strengthInput = m => ratings && { mu: ratings.mu, home: ratings.home, fittedAt: ratings.fittedAt,
+            homeTeam: ratings.teams.get(m.home.id), awayTeam: ratings.teams.get(m.away.id) };
+          snapshot.fixtures = [...snapshot.fixtures, ...upcoming.map(m => cross.has(m.league.id) ? { ...m, crossLeague: true }
+            : BSD_STRENGTH.has(m.league.id) ? { ...m, strengthInput: strengthInput(m) } : m)];
           bsdBackup = bsdBlocked('OVER_2_5', bsd.leagues);
           bsdBlocked15 = bsdBlocked('OVER_1_5', bsd.leagues);
           if (upcoming.length) snapshot.warnings = [...(snapshot.warnings ?? []), BSD_ATTRIBUTION];
@@ -276,6 +284,14 @@ export async function runJob(kind, { repo, provider, push, timeZone, minProbabil
         out.absences = { recorded: rows.length, pending: due.length - rows.length };
       } catch (error) { out.absences = { error: error.message }; }
       return out;
+    }
+    if (kind === 'ratings') {
+      // Fuerza de ataque/defensa de todos los equipos de BSD (último año), una vez al día.
+      if (!bsd) return { skipped: true, reason: 'Falta BSD_TOKEN' };
+      const fit = fitStrength(await repo.bsdResultsSince(now - 400 * DAY), now);
+      if (!fit.matches) return { skipped: true, reason: 'Sin resultados guardados' };
+      await repo.storeRatings(fit);
+      return { teams: fit.teams.length, matches: fit.matches, mu: +fit.mu.toFixed(3), home: +fit.home.toFixed(3) };
     }
     if (kind === 'notify') return deliverNotifications(repo, push, deadline);
     throw new Error('Tarea desconocida');

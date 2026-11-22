@@ -170,6 +170,18 @@ test('bsd_absences (019): una foto por equipo y día, lista de jugadores y solo 
   await db.exec('reset role;');
 });
 
+test('fuerza (020): un registro de parámetros, multiplicadores positivos y solo service_role', async () => {
+  await db.exec(`set role service_role;
+    insert into public.bsd_ratings(team, attack, defense, games, fitted_at) values ('bsd-79', 1.4, 0.8, 50, now());
+    insert into public.bsd_rating_meta(mu, home, matches, fitted_at) values (1.4, 1.2, 30000, now());
+    reset role;`);
+  await assert.rejects(db.exec("insert into public.bsd_rating_meta(singleton, mu, home, matches, fitted_at) values (false, 1, 1, 1, now())"), /check/);
+  await assert.rejects(db.exec("insert into public.bsd_ratings(team, attack, defense, games, fitted_at) values ('bsd-1', 0, 1, 1, now())"), /check/);
+  await assert.rejects(db.exec('set role authenticated; select * from public.bsd_ratings;'), /permission denied/);
+  await db.exec('reset role;');
+  assert.equal((await db.query("select neutral from public.bsd_matches where id = 'bsd-1'")).rows[0].neutral, false);
+});
+
 test('csv_matches exige marcador en partidos terminados y solo admite service_role', async () => {
   await db.exec(`set role service_role;
     insert into public.csv_sync_runs default values;

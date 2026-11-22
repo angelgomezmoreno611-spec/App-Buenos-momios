@@ -147,7 +147,13 @@ envía a todos los teléfonos el estado ("Siguen activos: ticket 1 y 3…", clav
   guarda cada día las bajas (lesionados/dudosos/suspendidos, `/teams/{id}/squad/`) de los
   equipos que juegan en ≤30 h en `bsd_absences` (migración 019, ≤40 equipos por vuelta);
   todavía NO alimentan el modelo: son para medir su efecto más adelante.
-- Copas europeas: salvo la Europa League como respaldo over 1.5, **no** entran. Champions (football-data, gratis) probada el 2026-11-21
+- `src/strength.js`: modelo de fuerza (ataque/defensa por equipo, todas las competiciones
+  de BSD juntas, vida media 365 días, prior 3). Job `ratings` (06:30 UTC, migración 020)
+  ajusta con `bsd_matches` y guarda `bsd_ratings`/`bsd_rating_meta`; generate lo usa para
+  la Champions (`BSD_STRENGTH`, `strengthInput` en el partido). Backtest semanal sin fuga:
+  Champions o2.5 ≥0.67 69.4% (72) ajuste / 80.7% (88) prueba 2025-26.
+- Copas europeas: Champions con el modelo de fuerza y Europa League como respaldo over 1.5;
+  Conference **no** entra. Champions (football-data, gratis) probada el 2026-11-21
   con la liga local de cada equipo: ≥0.67 acertó 58.8% (34 sel.) frente a 61% base, sin
   capacidad de distinguir; Europa y Conference League no están en el plan gratuito.
 - `src/football/`: módulo independiente de información de partidos con ocho

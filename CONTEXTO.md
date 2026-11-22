@@ -895,3 +895,14 @@ No se dejaron servidores activos ni se desplegó el proyecto.
   (copia de ~/AplicacionInclusign, otro repo): se quitó del índice (6b6b048) y, a pedido
   del usuario, se borró la carpeta (mismo commit b9a75cb y archivos idénticos a la copia
   principal; lo no versionado era solo un .venv). Usar `git add` con rutas, no `-A`.
+- 2026-11-22: modelo de fuerza para la Champions (el usuario eligió la opción 2). Cuotas y
+  pronósticos de BSD descartados para backtest: se actualizan después del inicio (fuga);
+  sí existen antes del partido. Backtest (scratchpad bt-strength.mjs, reajuste semanal
+  con partidos previos, ventana 400 días, todas las competiciones BSD): CL o2.5 ≥0.67 =
+  69.4% (72) ajuste 2023-08/2025-06 y 80.7% (88) prueba 2025-07/2026-11 con vida media
+  365 y prior 3 (elegidos por el ajuste; todas las combinaciones dan 75-81% en prueba);
+  o1.5 ≥0.82 81.1%/88.5%. EL y Conference no mejoran. Implementado: src/strength.js,
+  job ratings, migración 020 (neutral en bsd_matches, bsd_ratings, bsd_rating_meta, cron
+  06:30 UTC), BSD_VALIDATION bsd-7. 112/112. Commit LOCAL sin subir: falta que el usuario
+  confirme aplicar 020 en producción (el bloqueo de permisos lo pidió); después: push,
+  `npm run import:bsd` (rellena neutral), job ratings y generación de prueba sin publicar.

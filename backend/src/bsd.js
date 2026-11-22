@@ -19,7 +19,7 @@ export const BSD_LEAGUES = Object.freeze({
   'bsd-52': 'Super League (China)', 'bsd-15': 'Super League (Suiza)', 'bsd-91': 'National League (Inglaterra)',
   'bsd-70': 'NPL Queensland (Australia)', 'bsd-18': 'MLS', 'bsd-54': 'Eliteserien (Noruega)', 'bsd-36': 'Liga F (España, femenil)',
   'bsd-19': 'Liga MX', 'bsd-24': 'Super League (Grecia)', 'bsd-14': 'Pro League (Bélgica)', 'bsd-25': 'Ekstraklasa (Polonia)',
-  'bsd-17': 'Saudi Pro League', 'bsd-8': 'Europa League'
+  'bsd-17': 'Saudi Pro League', 'bsd-8': 'Europa League', 'bsd-7': 'Champions League'
 });
 
 // Backtest 2026-11-22 (BSD 2023-07 a 2026-11, umbral fijo; "prueba" = desde 2025-07).
@@ -28,13 +28,19 @@ export const BSD_LEAGUES = Object.freeze({
 // 90.5%); en over 2.5 no distingue. [selecciones, acierto]
 export const BSD_VALIDATION = Object.freeze({
   OVER_2_5: { 'bsd-52': [93, 0.72], 'bsd-15': [87, 0.713], 'bsd-91': [75, 0.707], 'bsd-70': [141, 0.702],
-    'bsd-18': [192, 0.698], 'bsd-54': [79, 0.684], 'bsd-36': [60, 0.817] },
+    'bsd-18': [192, 0.698], 'bsd-54': [79, 0.684], 'bsd-36': [60, 0.817],
+    // Champions con el modelo de fuerza (src/strength.js): ajuste 69.4% (72), prueba 2025-26 80.7% (88).
+    'bsd-7': [72, 0.694] },
   OVER_1_5: { 'bsd-52': [264, 0.833], 'bsd-15': [255, 0.831], 'bsd-91': [359, 0.85], 'bsd-70': [226, 0.827],
     'bsd-18': [557, 0.851], 'bsd-54': [255, 0.855], 'bsd-36': [171, 0.883], 'bsd-19': [153, 0.83],
-    'bsd-24': [50, 0.88], 'bsd-14': [114, 0.886], 'bsd-25': [64, 0.906], 'bsd-17': [243, 0.864], 'bsd-8': [111, 0.865] }
+    'bsd-24': [50, 0.88], 'bsd-14': [114, 0.886], 'bsd-25': [64, 0.906], 'bsd-17': [243, 0.864], 'bsd-8': [111, 0.865],
+    // Champions (modelo de fuerza) ≥0.82: ajuste 81.1% (159), prueba 2025-26 88.5% (165).
+    'bsd-7': [159, 0.811] }
 });
 // Copas que se calculan con la liga local de cada equipo.
 export const BSD_CROSS = new Set(['bsd-8']);
+// Competiciones que se calculan con el modelo de fuerza (src/strength.js).
+export const BSD_STRENGTH = new Set(['bsd-7']);
 // Ligas que BSD toma de otras fuentes (pasó en todos los mercados que esas cubrían):
 // se desactivan allí para no repetir partidos.
 export const BSD_REPLACES = Object.freeze({
@@ -57,7 +63,8 @@ export function normalizeBsd(e) {
   return { id: `bsd-${e.id}`, league: { id: bsdLeague(e.league_id), name: BSD_LEAGUES[bsdLeague(e.league_id)] ?? `BSD ${e.league_id}` },
     kickoff: new Date(e.event_date).toISOString(), status,
     home: { id: `bsd-${e.home_team_id}`, name: e.home_team }, away: { id: `bsd-${e.away_team_id}`, name: e.away_team },
-    homeGoals: scored ? e.home_score : null, awayGoals: scored ? e.away_score : null, cup: BSD_CUPS.has(e.league_id) };
+    homeGoals: scored ? e.home_score : null, awayGoals: scored ? e.away_score : null, cup: BSD_CUPS.has(e.league_id),
+    neutral: Boolean(e.is_neutral_ground) };
 }
 
 // Todos los partidos entre dos fechas (AAAA-MM-DD), página a página.
