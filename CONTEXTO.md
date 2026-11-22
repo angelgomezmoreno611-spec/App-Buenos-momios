@@ -874,3 +874,7 @@ No se dejaron servidores activos ni se desplegó el proyecto.
   Grecia, Bélgica, Polonia, Arabia, Europa League con crossPredict). Quitadas de CSV:
   CHN, SWZ, USA, NOR, MEX, G1, B1, POL; de Football Charts: national, saudi1. settle lee
   bsd_matches. 105/105.
+  Verificado en producción: job bsd → {"stored":1096,"finished":293,"upcoming":777}.
+  Generación de prueba local con datos reales SIN publicar (publish interceptado):
+  19 s, 3 tickets de 4 + soñadora de 8, 10 selecciones de BSD (Eliteserien, MLS, Suiza,
+  National League, Liga F). La próxima tanda real sale cuando se resuelva la actual.
