@@ -45,6 +45,11 @@ export class SupabaseRepository {
     return batch;
   }
   async publish(batch) { return this.rpc('publish_batch', { p_batch: batch }); }
+  // Tandas desde un día (AAAA-MM-DD), la más reciente primero.
+  async batchesSince(day) {
+    const rows = await this.request(`batches?day=gte.${encodeURIComponent(day)}&select=day&order=day.desc&limit=20`);
+    return (await Promise.all(rows.map(r => this.getBatch(r.day)))).filter(Boolean);
+  }
   // Tanda más reciente (la que sigue en juego o la última resuelta).
   async latestBatch() {
     const rows = await this.request('batches?select=day&order=day.desc&limit=1');

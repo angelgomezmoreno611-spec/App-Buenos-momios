@@ -70,17 +70,43 @@ function fakeRepo(latest) {
   return repo;
 }
 
-test('generate conserva la tanda con tickets activos y solo envía su estado', async () => {
-  const now = Date.parse('2026-11-24T06:45:00Z');
-  const latest = { id: 'b-old', day: '2026-11-21', tickets: [ticket(1, 'pending', [new Date(now + DAY).toISOString()]), ticket(2, 'lost', [new Date(now).toISOString()])] };
-  const repo = fakeRepo(latest), push = { configured: true };
+test('generate: con 2 tandas en 7 días solo avisa el estado de las que siguen en juego', async () => {
+  const now = Date.parse('2026-11-24T06:45:00Z'), soon = new Date(now + DAY).toISOString(), past = new Date(now - DAY).toISOString();
+  const a = { id: 'b-21', day: '2026-11-21', tickets: [ticket(1, 'pending', [soon]), ticket(2, 'lost', [past])] };
+  const b = { id: 'b-22', day: '2026-11-22', tickets: [ticket(1, 'pending', [soon]), ticket(2, 'pending', [soon])] };
+  const repo = { ...fakeRepo(null), batchesSince: async since => { assert.equal(since, '2026-11-12'); return [b, a]; } };
   const provider = { competitions: () => [], snapshot: async () => { throw new Error('no debe consultar partidos'); } };
-  const out = await runJob('generate', { repo, provider, push, now, timeZone: tz, legs: 3, days: 7, ticketThresholds: [0.67, 0.67, 0.67] });
-  assert.deepEqual(out.active, [1]);
+  const out = await runJob('generate', { repo, provider, push: { configured: true }, now, timeZone: tz, legs: 3, days: 7, ticketThresholds: [0.67] });
   assert.equal(out.kept, true);
+  assert.deepEqual(out.active, [{ day: '2026-11-22', tickets: [1, 2] }, { day: '2026-11-21', tickets: [1] }]);
+  assert.equal(out.nextBatch, '2026-11-28'); // la del 21 sale de la semana el 28
   assert.equal(repo.calls.published, null);
-  assert.deepEqual(repo.calls.notices.map(n => [n.key, n.batchId]), [['status:2026-11-24', 'b-old']]);
+  assert.deepEqual(repo.calls.notices.map(n => [n.key, n.batchId, n.title]), [['status:2026-11-24', 'b-22', '3 tickets siguen activos en 2 tandas']]);
+  assert.equal(repo.calls.notices[0].body, 'Tanda del 22/11: Siguen activos: ticket 1 y ticket 2. No se ha perdido ningún partido.\nTanda del 21/11: Sigue activo: ticket 1. Perdido: 1.');
   assert.equal(repo.calls.delivered, 1); // se envía en la misma ejecución (23:45)
+});
+
+test('generate: sin cupo y sin tandas en juego avisa cuándo sale la próxima', async () => {
+  const now = Date.parse('2026-11-24T06:45:00Z'), past = new Date(now - DAY).toISOString();
+  const done = (id, day) => ({ id, day, tickets: [ticket(1, 'lost', [past])] });
+  const repo = { ...fakeRepo(null), batchesSince: async () => [done('b-23', '2026-11-23'), done('b-20', '2026-11-20')] };
+  const out = await runJob('generate', { repo, provider: {}, now, timeZone: tz, legs: 3, days: 7, ticketThresholds: [0.67] });
+  assert.equal(out.nextBatch, '2026-11-27');
+  assert.deepEqual(repo.calls.notices[0], { key: 'status:2026-11-24', batchId: 'b-23', title: 'Tus tickets ya se resolvieron',
+    body: 'La próxima tanda sale el 27/11 (máximo 2 tandas por semana).' });
+  // Con TICKET_WEEKLY_MAX = 3 sí habría tanda nueva (aquí falla al pedir partidos: prueba que lo intenta).
+  await assert.rejects(runJob('generate', { repo, provider: { snapshot: async () => { throw new Error('genera'); } }, now, timeZone: tz, weeklyMax: 3 }), /genera/);
+});
+
+test('generate: con una sola tanda en la semana sale la segunda aunque la primera siga en juego', async () => {
+  const now = Date.parse('2026-11-22T06:45:00Z'), snapshot = demoSnapshot(now);
+  const a = { id: 'b-21', day: '2026-11-21', tickets: [ticket(1, 'pending', [new Date(now + 5 * DAY).toISOString()])] };
+  const repo = { ...fakeRepo(null), batchesSince: async () => [a] };
+  const out = await runJob('generate', { repo, provider: { competitions: () => [], snapshot: async () => snapshot }, now, timeZone: tz, legs: 3, days: 7,
+    minProbability: 0.5, ticketThresholds: [0.5] });
+  assert.equal(repo.calls.published.day, '2026-11-22');
+  assert.equal(out.batchId, repo.calls.published.id);
+  assert.match(repo.calls.notices[0].body, /^Sigue en juego tu tanda del 21\/11\. /);
 });
 
 test('generate crea tanda nueva de 7 días y la avisa cuando ya no queda ningún ticket activo', async () => {

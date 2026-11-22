@@ -83,12 +83,14 @@ apaga. Requiere migración 008; si la base lo rechaza, la tanda se publica sin �
 siguen leyendo tandas antiguas con él. La API liquida según el mercado de cada
 selección y el tamaño (`legs`) de cada ticket.
 **Tandas de varios días**: entran partidos de los `TICKET_DAYS` (1–7, por defecto 7) días
-locales desde el día de la tanda (la demo usa 72 h). La tanda sigue en juego mientras le
-quede un ticket activo (`activeTickets`: pendiente/revisión y último partido hace <4 días);
-`/api/tickets` devuelve la más reciente (`latestBatch`). Cada noche generate (23:45)
-envía a todos los teléfonos el estado ("Siguen activos: ticket 1 y 3…", clave
-`status:<día>`) o, si ya no queda ningún ticket activo, crea la tanda nueva y avisa
-"Tus nuevos tickets ya están listos" (`new:<id>`); los envía en la misma ejecución.
+locales desde el día de la tanda (la demo usa 72 h). Una tanda sigue en juego mientras le
+quede un ticket activo (`activeTickets`: pendiente/revisión y último partido hace <4 días).
+**Máximo 2 tandas en 7 días** (`TICKET_WEEKLY_MAX`): cada noche generate (23:45) crea una
+tanda nueva si hay cupo, aunque otra siga en juego (sin repetir partidos), y avisa "Tus
+nuevos tickets ya están listos" (`new:<id>`); sin cupo, avisa el estado de las que siguen
+en juego (`statusNoticeAll`, clave `status:<día>`) o cuándo sale la próxima. Los avisos se
+envían en la misma ejecución. `/api/tickets` devuelve `batch` (la más reciente) y `batches`
+(además las que siguen en juego); la app muestra un selector "Tanda del dd/mm".
 
 **Backend** (`backend/`, Node ESM sin framework, sin dependencias de runtime):
 - `src/config.js` → `configuredApp(env)` es el único punto de cableado: según

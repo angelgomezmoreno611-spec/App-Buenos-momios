@@ -27,6 +27,7 @@ class _DashboardState extends State<Dashboard> with WidgetsBindingObserver {
   bool _updateBusy = false;
   late final PushService _push = PushService(_api);
   Batch? _batch;
+  List<Batch> _batches = [];
   List<Batch> _history = [];
   bool _loading = false, _historyLoading = false, _alertBusy = false;
   bool _saveBusy = false;
@@ -142,9 +143,17 @@ class _DashboardState extends State<Dashboard> with WidgetsBindingObserver {
       _error = null;
     });
     try {
-      final batch = await _api.tickets();
+      final batches = await _api.ticketBatches();
       if (!mounted) return;
-      setState(() => _batch = batch);
+      // Conserva la tanda elegida si sigue en la lista; si no, la más reciente.
+      final selected = _batch?.id;
+      final batch = batches.isEmpty
+          ? null
+          : batches.firstWhere((b) => b.id == selected, orElse: () => batches.first);
+      setState(() {
+        _batches = batches;
+        _batch = batch;
+      });
       if (batch != null) {
         try {
           await _push.follow(batch.id);
@@ -626,6 +635,20 @@ class _DashboardState extends State<Dashboard> with WidgetsBindingObserver {
             ),
           ],
         ),
+        if (_batches.length > 1) ...[
+          Wrap(
+            spacing: 8,
+            children: [
+              for (final b in _batches)
+                ChoiceChip(
+                  label: Text('Tanda del ${b.dayShort}'),
+                  selected: b.id == _batch?.id,
+                  onSelected: (_) => setState(() => _batch = b),
+                ),
+            ],
+          ),
+          const SizedBox(height: 8),
+        ],
         if (_batch != null)
           Text(
             '${_batch!.dayLabel} · ${_batch!.uniqueMatches} partidos únicos',

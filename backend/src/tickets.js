@@ -246,14 +246,29 @@ export function statusNotice(batch, now = Date.now()) {
   return { title: title.charAt(0).toUpperCase() + title.slice(1), body };
 }
 
-// Aviso de tanda nueva (cuando la anterior ya no tiene tickets en juego).
-export function newBatchNotice(batch, previous = null, timeZone = 'America/Mazatlan') {
+const dm = d => `${d.slice(8)}/${d.slice(5, 7)}`;
+// Varias tandas en juego (máximo 2 por semana): un renglón por tanda, más reciente primero.
+export function statusNoticeAll(batches, now = Date.now()) {
+  const live = batches.filter(b => activeTickets(b, now).length);
+  if (live.length === 1) return statusNotice(live[0], now);
+  const active = live.reduce((n, b) => n + activeTickets(b, now).length, 0);
+  return { title: `${active} tickets siguen activos en ${live.length} tandas`,
+    body: live.map(b => `Tanda del ${dm(b.day)}: ${statusNotice(b, now).body}`).join('\n') };
+}
+// Ya hubo el máximo de tandas en la semana y ninguna sigue en juego.
+export function waitNotice(nextDay) {
+  return { title: 'Tus tickets ya se resolvieron', body: `La próxima tanda sale el ${dm(nextDay)} (máximo 2 tandas por semana).` };
+}
+
+// Aviso de tanda nueva. `previous`: la última tanda; `others`: tandas que siguen en juego.
+export function newBatchNotice(batch, previous = null, timeZone = 'America/Mazatlan', others = []) {
   const count = batch.tickets.length;
   const won = previous?.tickets.filter(t => t.status === 'won').length ?? 0;
-  const before = previous ? (won ? `Tu tanda anterior terminó con ${won} ticket${won > 1 ? 's' : ''} ganado${won > 1 ? 's' : ''}. ` : 'Tus tickets anteriores ya se resolvieron. ') : '';
+  const live = others.filter(b => activeTickets(b).length);
+  const before = live.length ? `Sigue en juego tu tanda del ${live.map(b => dm(b.day)).join(' y del ')}. `
+    : previous ? (won ? `Tu tanda anterior terminó con ${won} ticket${won > 1 ? 's' : ''} ganado${won > 1 ? 's' : ''}. ` : 'Tus tickets anteriores ya se resolvieron. ') : '';
   if (!count) return { title: 'Sin tickets nuevos por ahora', body: `${before}No hubo partidos con la probabilidad suficiente; mañana se vuelve a intentar.` };
   const days = batch.tickets.flatMap(t => t.selections.map(x => dayKey(Date.parse(x.match.kickoff), timeZone))).sort();
-  const dm = d => `${d.slice(8)}/${d.slice(5, 7)}`;
   const span = days.length ? (days[0] === days.at(-1) ? ` Partidos del ${dm(days[0])}.` : ` Partidos del ${dm(days[0])} al ${dm(days.at(-1))}.`) : '';
   return { title: 'Tus nuevos tickets ya están listos 🎟️', body: `${before}${count} ticket${count > 1 ? 's' : ''} nuevo${count > 1 ? 's' : ''}.${span}` };
 }

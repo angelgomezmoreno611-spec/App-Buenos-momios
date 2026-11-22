@@ -54,6 +54,21 @@ class Api {
     return data['batch'] == null ? null : Batch(data['batch'] as Json);
   }
 
+  /// Tandas en juego (máximo 2 por semana), la más reciente primero. La API
+  /// antigua solo devolvía `batch`.
+  Future<List<Batch>> ticketBatches() async {
+    if (demo) {
+      final batch = await tickets();
+      return batch == null ? [] : [batch];
+    }
+    final data = await _request('/api/tickets');
+    final list = data['batches'] as List?;
+    if (list != null) {
+      return list.map((b) => Batch(Map<String, dynamic>.from(b as Map))).toList();
+    }
+    return data['batch'] == null ? [] : [Batch(data['batch'] as Json)];
+  }
+
   Future<List<Batch>> history() async {
     if (demo) {
       final preferences = await SharedPreferences.getInstance();

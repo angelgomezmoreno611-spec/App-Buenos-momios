@@ -35,6 +35,9 @@ export function configuredApp(env = process.env) {
   const minProbability = ticketThresholds?.[0] ?? Number(env.MIN_PROBABILITY ?? (market === 'OVER_1_5' ? 0.8 : 0.67));
   // Días que abarca una tanda (1 = solo el día de la tanda; 7 = una semana).
   const days = Number(env.TICKET_DAYS ?? 7);
+  // Máximo de tandas nuevas en 7 días (puede haber varias en juego a la vez).
+  const weeklyMax = Number(env.TICKET_WEEKLY_MAX ?? 2);
+  if (!Number.isInteger(weeklyMax) || weeklyMax < 1 || weeklyMax > 7) throw new Error('TICKET_WEEKLY_MAX debe estar entre 1 y 7');
   if (!Number.isInteger(days) || days < 1 || days > 7) throw new Error('TICKET_DAYS debe estar entre 1 y 7');
   // Bzzoiro Sports Data (BSD_TOKEN): BSD_COMPETITIONS cambia las ligas ("none" desactiva;
   // ids como "18,52" o "bsd-18"). Las ligas que toma se quitan de CSV y Football Charts.
@@ -101,7 +104,7 @@ export function configuredApp(env = process.env) {
     // Ticket "La soñadora" (8 over 2.5): TICKET_DREAMER=false lo apaga.
     dreamer: env.TICKET_DREAMER?.trim() !== 'false',
     // Partidos de los próximos `days` días (hora local); la tanda sigue hasta resolverse.
-    days,
+    days, weeklyMax,
     // Descubrimiento de partidos con API-Football (plan gratuito); AF_DISCOVERY=false lo apaga.
     apiFootball: env.API_FOOTBALL_KEY?.trim() && env.AF_DISCOVERY?.trim() !== 'false' ? { key: env.API_FOOTBALL_KEY.trim() } : null, evidence: EVIDENCE[market] ?? null,
     repo: new SupabaseRepository({ url: env.SUPABASE_URL,

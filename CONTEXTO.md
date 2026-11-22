@@ -910,3 +910,10 @@ No se dejaron servidores activos ni se desplegó el proyecto.
   Sabah-Barcelona 79%, Real Madrid-PSV 75%, Brujas-Liverpool 73%, Galatasaray-Villa 70%,
   PSG-Roma 70%, Lille-Bayern 68%); Arsenal-Dortmund 40%, Como-AEK 48%. La tanda real sale
   cuando se resuelva la actual (probablemente después del 27/11).
+- 2026-11-22: el usuario pide "solo 2 tandas máximo por semana" (para que entre la
+  Champions del 24-25 sin esperar a que se resuelva la tanda del 21). Implementado:
+  máximo 2 tandas en 7 días móviles (TICKET_WEEKLY_MAX); con cupo se genera aunque otra
+  siga en juego; sin cupo, aviso de estado de todas las tandas en juego o de cuándo sale
+  la próxima. repo.batchesSince, /api/tickets con `batches`, app con selector de tanda
+  (ChoiceChip). Backend 114/114, Flutter 19/19, analyze limpio. Tandas en 7 días hoy: 1
+  (la del 21) → el generate de las 23:45 del 22 (Mazatlán) debe crear la segunda.

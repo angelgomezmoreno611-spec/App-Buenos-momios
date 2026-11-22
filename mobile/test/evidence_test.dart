@@ -165,6 +165,7 @@ void main() {
       'Del 21/11 al 27/11',
     );
     expect(Batch({'day': '2026-11-21'}).dayLabel, '21/11');
+    expect(Batch({'day': '2026-11-21', 'until': '2026-11-27'}).dayShort, '21/11');
     expect(
       Batch({'day': '2026-11-21', 'until': '2026-11-21'}).dayLabel,
       '21/11',

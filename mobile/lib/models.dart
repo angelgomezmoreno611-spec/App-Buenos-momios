@@ -7,6 +7,8 @@ class Batch {
   String get day => data['day'] as String;
   // Último día que abarca la tanda (tandas de varios días); antiguas: null.
   String? get until => data['until'] as String?;
+  // Día de la tanda (dd/mm), para distinguir varias tandas en juego.
+  String get dayShort => '${day.substring(8, 10)}/${day.substring(5, 7)}';
   String get dayLabel {
     String dm(String d) => '${d.substring(8, 10)}/${d.substring(5, 7)}';
     final end = until;
