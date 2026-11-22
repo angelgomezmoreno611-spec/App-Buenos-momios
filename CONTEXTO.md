@@ -890,3 +890,8 @@ No se dejaron servidores activos ni se desplegó el proyecto.
   regreso) solo del momento actual, sin historia → se empieza a guardar: migración 019
   (bsd_absences) aplicada, job bsd guarda ≤40 equipos/vuelta de partidos en ≤30 h (ligas
   activas + CL y Conference). Revisar su efecto en ~2-3 meses (febrero 2027). 107/107.
+  Verificado en producción: job bsd → absences {"recorded":40,"pending":18} (el resto en
+  las siguientes horas). Un `git add -A` metió por error backend/api/AplicacionInclusign
+  (copia de ~/AplicacionInclusign, otro repo): se quitó del índice (6b6b048) y, a pedido
+  del usuario, se borró la carpeta (mismo commit b9a75cb y archivos idénticos a la copia
+  principal; lo no versionado era solo un .venv). Usar `git add` con rutas, no `-A`.
