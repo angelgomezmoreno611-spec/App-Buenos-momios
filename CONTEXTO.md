@@ -809,3 +809,7 @@ No se dejaron servidores activos ni se desplegó el proyecto.
   Arreglo: settle entrega los avisos al terminar de liquidar (notify queda de respaldo).
   96/96. La tanda del 20 ya está resuelta (1 ganado, 3 perdidos): generate de las
   23:45 del 21 debe crear la primera tanda de 7 días y avisar.
+- 2026-11-21 20:25 Mazatlán: a pedido del usuario se lanzó generate a mano (2.º intento,
+  el 1.º chocó con el lock): tanda 2026-11-21 (96a18f33…), days 7 hasta el 27/11, 3
+  tickets 0.67 (prob. 50/46/39%) + La soñadora (6 over 2.5, 12%), aviso "nuevos tickets"
+  enviado (sent 1). El generate de las 23:45 ya no crea tanda: debe enviar el estado.
