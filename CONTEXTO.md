@@ -903,6 +903,10 @@ No se dejaron servidores activos ni se desplegó el proyecto.
   365 y prior 3 (elegidos por el ajuste; todas las combinaciones dan 75-81% en prueba);
   o1.5 ≥0.82 81.1%/88.5%. EL y Conference no mejoran. Implementado: src/strength.js,
   job ratings, migración 020 (neutral en bsd_matches, bsd_ratings, bsd_rating_meta, cron
-  06:30 UTC), BSD_VALIDATION bsd-7. 112/112. Commit LOCAL sin subir: falta que el usuario
-  confirme aplicar 020 en producción (el bloqueo de permisos lo pidió); después: push,
-  `npm run import:bsd` (rellena neutral), job ratings y generación de prueba sin publicar.
+  06:30 UTC), BSD_VALIDATION bsd-7. 112/112. Con confirmación del usuario: 020 aplicada,
+  push 061b449, `npm run import:bsd` (32 908, rellena neutral), job ratings en producción
+  {"teams":4366,"matches":30898,"mu":1.467,"home":1.204} en 17.6 s. Generación de prueba
+  local SIN publicar: 18 s, 7 partidos de Champions en los tickets (Leipzig-Lens 81%,
+  Sabah-Barcelona 79%, Real Madrid-PSV 75%, Brujas-Liverpool 73%, Galatasaray-Villa 70%,
+  PSG-Roma 70%, Lille-Bayern 68%); Arsenal-Dortmund 40%, Como-AEK 48%. La tanda real sale
+  cuando se resuelva la actual (probablemente después del 27/11).
